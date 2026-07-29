@@ -12,3 +12,9 @@ export const config = createConfig({
   },
   ssr: true, // prevents hydration mismatch in Next.js
 })
+
+declare module '@wagmi/core' {
+  interface Register {
+    config: typeof config
+  }
+}

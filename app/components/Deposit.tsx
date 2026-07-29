@@ -5,9 +5,9 @@ import { CONTRACT_ADDRESS, ABI, USDC_ADDRESS, ERC20_ABI } from '@/lib/contract'
 import { parseUnits, formatUnits } from 'viem'
 
 export function Deposit() {
-  const { address } = useAccount()
+  const { address, chain } = useAccount()
   const [amount, setAmount] = useState('')
-  const [tokenAddress, setTokenAddress] = useState(USDC_ADDRESS)
+  const [tokenAddress, setTokenAddress] = useState<string>(USDC_ADDRESS)
   const [error, setError] = useState('')
 
   const { data: vault } = useReadContract({
@@ -57,23 +57,29 @@ export function Deposit() {
 
   function handleApprove() {
     setError('')
+    if (!address || !chain) return setError('Connect your wallet first')
     if (!amount || parsedAmount <= BigInt(0)) return setError('Enter an amount')
     writeContract({
       address: tokenAddress as `0x${string}`,
       abi: ERC20_ABI,
       functionName: 'approve',
       args: [CONTRACT_ADDRESS, parsedAmount],
+      account: address,
+      chain,
     })
   }
 
   function handleDeposit() {
     setError('')
+    if (!address || !chain) return setError('Connect your wallet first')
     if (!amount || parsedAmount <= BigInt(0)) return setError('Enter an amount')
     writeContract({
       address: CONTRACT_ADDRESS,
       abi: ABI,
       functionName: 'deposit',
       args: [tokenAddress as `0x${string}`, parsedAmount],
+      account: address,
+      chain,
     })
   }
 
@@ -97,9 +103,9 @@ export function Deposit() {
           {balance !== undefined && (
             <span
               style={{ fontSize: 12, color: '#378ADD', cursor: 'pointer' }}
-              onClick={() => setAmount(formatUnits(balance as bigint, dec))}
+              onClick={() => setAmount(formatUnits(balance, dec))}
             >
-              Balance: {formatUnits(balance as bigint, dec)} {symbol}
+              Balance: {formatUnits(balance, dec)} {symbol}
             </span>
           )}
         </div>

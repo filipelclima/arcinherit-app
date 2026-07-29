@@ -5,7 +5,7 @@ import { CONTRACT_ADDRESS, ABI } from '@/lib/contract'
 import { isAddress } from 'viem'
 
 export function ClaimInheritance() {
-  const { address } = useAccount()
+  const { address, chain } = useAccount()
   const [ownerAddress, setOwnerAddress] = useState('')
   const [tokenAddress, setTokenAddress] = useState('')
   const [error, setError] = useState('')
@@ -39,6 +39,7 @@ export function ClaimInheritance() {
 
   function handleClaim() {
     setError('')
+    if (!address || !chain) return setError('Connect your wallet first')
     if (!isAddress(ownerAddress)) return setError('Please enter a valid wallet address for the vault owner')
     if (!isAddress(tokenAddress)) return setError('Please enter a valid token contract address')
     if (!canClaim) return setError('This vault is not yet available for claiming')
@@ -47,6 +48,8 @@ export function ClaimInheritance() {
       abi: ABI,
       functionName: 'claimInheritance',
       args: [ownerAddress as `0x${string}`, tokenAddress as `0x${string}`],
+      account: address,
+      chain,
     })
   }
 
@@ -58,7 +61,7 @@ export function ClaimInheritance() {
     return `${hours} hour${hours !== 1 ? 's' : ''}`
   }
 
-  const heirs = vault ? (vault[4] as Array<{ wallet: string; percentage: number }>) : []
+  const heirs = vault ? vault[4] : []
   const myHeirEntry = address ? heirs.find(h => h.wallet.toLowerCase() === address.toLowerCase()) : null
   const isHeir = !!myHeirEntry
 

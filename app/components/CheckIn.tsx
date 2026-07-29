@@ -1,10 +1,9 @@
-// @ts-nocheck
 'use client'
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
 import { CONTRACT_ADDRESS, ABI } from '@/lib/contract'
 
 export function CheckIn() {
-  const { address } = useAccount()
+  const { address, chain } = useAccount()
   const { writeContract, data: hash, isPending } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
 
@@ -30,7 +29,10 @@ export function CheckIn() {
         </div>
       )}
       <button
-        onClick={() => writeContract({ address: CONTRACT_ADDRESS, abi: ABI, functionName: 'checkIn' })}
+        onClick={() => {
+          if (!address || !chain) return
+          writeContract({ address: CONTRACT_ADDRESS, abi: ABI, functionName: 'checkIn', account: address, chain })
+        }}
         disabled={isPending || isConfirming}
         style={{ background: '#378ADD', color: '#fff', width: '100%', padding: '14px', fontWeight: 700, fontSize: 15, borderRadius: 10 }}
       >
