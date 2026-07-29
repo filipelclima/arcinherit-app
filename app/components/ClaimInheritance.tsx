@@ -58,34 +58,21 @@ export function ClaimInheritance() {
     return `${hours} hour${hours !== 1 ? 's' : ''}`
   }
 
-  // Check if caller is an heir
-  const isHeir = vault && address ? vault[4].some(h => h.wallet.toLowerCase() === address.toLowerCase()) : false
-  const myShare = vault && address ? vault[4].find(h => h.wallet.toLowerCase() === address.toLowerCase()) : null
+  const heirs = vault ? (vault[4] as Array<{ wallet: string; percentage: number }>) : []
+  const myHeirEntry = address ? heirs.find(h => h.wallet.toLowerCase() === address.toLowerCase()) : null
+  const isHeir = !!myHeirEntry
 
   return (
     <div>
-      {/* Explainer for heirs */}
       <div style={{ background: '#13131a', border: '1px solid #1e1e2e', borderRadius: 12, padding: '1.5rem', marginBottom: '1.5rem' }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9', marginBottom: 8 }}>For heirs</div>
         <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7, marginBottom: '1.25rem' }}>
-          If someone has added you as an heir to their vault, you can check the status and claim your inheritance here. You will need:
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: '1.25rem' }}>
-          {[
-            { icon: '1️⃣', text: 'The wallet address of the person whose vault you are claiming from' },
-            { icon: '2️⃣', text: 'The token contract address of the tokens you want to claim (e.g. USDC)' },
-            { icon: '3️⃣', text: 'The timelock must have expired — meaning the person has not checked in for longer than their set period' },
-          ].map((item, i) => (
-            <div key={i} style={{ display: 'flex', gap: 10, fontSize: 13, color: '#94a3b8' }}>
-              <span style={{ flexShrink: 0 }}>{item.icon}</span>
-              <span>{item.text}</span>
-            </div>
-          ))}
+          If someone has added you as an heir to their vault, you can check the status and claim your inheritance here.
         </div>
 
         <div style={{ marginBottom: 12 }}>
           <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 6 }}>
-            Vault owner&apos;s wallet address
+            Vault owner wallet address
           </label>
           <input
             value={ownerAddress}
@@ -94,27 +81,26 @@ export function ClaimInheritance() {
           />
         </div>
 
-        {/* Vault status */}
         {ownerAddress && isAddress(ownerAddress) && vault && (
           <div style={{ background: '#0a0a0f', borderRadius: 8, padding: '12px 14px', marginBottom: 12, fontSize: 13 }}>
             {isHeir ? (
               <div style={{ color: '#1D9E75', fontWeight: 600, marginBottom: 4 }}>
-                ✓ You are listed as an heir ({myShare?.percentage}% share)
+                You are listed as an heir ({myHeirEntry?.percentage}% share)
               </div>
             ) : (
-              <div style={{ color: '#ef4444', marginBottom: 4 }}>✗ Your wallet is not listed as an heir of this vault</div>
+              <div style={{ color: '#ef4444', marginBottom: 4 }}>Your wallet is not listed as an heir of this vault</div>
             )}
             {timeLeft !== undefined && (
               canClaim
-                ? <div style={{ color: '#1D9E75' }}>✓ This vault is ready to claim</div>
-                : <div style={{ color: '#EF9F27' }}>⏱ {formatTimeLeft(timeLeft)} remaining before this vault can be claimed</div>
+                ? <div style={{ color: '#1D9E75' }}>This vault is ready to claim</div>
+                : <div style={{ color: '#EF9F27' }}>{formatTimeLeft(timeLeft)} remaining before this vault can be claimed</div>
             )}
           </div>
         )}
 
         <div style={{ marginBottom: '1.25rem' }}>
           <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 6 }}>
-            Token address to claim (e.g. USDC = 0x3600...0000)
+            Token address to claim
           </label>
           <input
             value={tokenAddress}
@@ -125,13 +111,13 @@ export function ClaimInheritance() {
 
         {error && (
           <div style={{ background: '#ef444411', border: '1px solid #ef444433', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#ef4444', marginBottom: '1rem' }}>
-            ⚠️ {error}
+            {error}
           </div>
         )}
 
         {isSuccess && (
           <div style={{ background: '#1D9E7511', border: '1px solid #1D9E7544', borderRadius: 8, padding: '12px 14px', fontSize: 14, color: '#1D9E75', marginBottom: '1rem', fontWeight: 500 }}>
-            ✓ Inheritance claimed successfully! Tokens have been sent to your wallet.
+            Inheritance claimed successfully!
           </div>
         )}
 
@@ -144,7 +130,7 @@ export function ClaimInheritance() {
             width: '100%', padding: '14px', fontWeight: 700, fontSize: 15, borderRadius: 10
           }}
         >
-          {isPending ? 'Confirm in your wallet...' : isConfirming ? 'Claiming...' : 'Claim my inheritance →'}
+          {isPending ? 'Confirm in your wallet...' : isConfirming ? 'Claiming...' : 'Claim my inheritance'}
         </button>
       </div>
     </div>
