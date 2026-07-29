@@ -52,12 +52,12 @@ export function Deposit() {
   if (!vault || !vault[3]) return null
 
   const dec = decimals ?? 6
-  const parsedAmount = amount ? parseUnits(amount, dec) : 0n
+  const parsedAmount = amount ? parseUnits(amount, dec) : BigInt(0)
   const hasAllowance = allowance !== undefined && allowance >= parsedAmount
 
   function handleApprove() {
     setError('')
-    if (!amount || parsedAmount <= 0n) return setError('Enter an amount')
+    if (!amount || parsedAmount <= BigInt(0)) return setError('Enter an amount')
     writeContract({
       address: tokenAddress as `0x${string}`,
       abi: ERC20_ABI,
@@ -68,7 +68,7 @@ export function Deposit() {
 
   function handleDeposit() {
     setError('')
-    if (!amount || parsedAmount <= 0n) return setError('Enter an amount')
+    if (!amount || parsedAmount <= BigInt(0)) return setError('Enter an amount')
     writeContract({
       address: CONTRACT_ADDRESS,
       abi: ABI,
@@ -79,7 +79,7 @@ export function Deposit() {
 
   return (
     <div style={{ background: '#13131a', border: '1px solid #1e1e2e', borderRadius: 12, padding: '1.5rem', marginBottom: '1.5rem' }}>
-      <div style={{ fontSize: 16, fontWeight: 600, color: '#f1f5f9', marginBottom: '1.25rem' }}>Deposit Tokens</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9', marginBottom: '1.25rem' }}>Deposit Tokens</div>
 
       <div style={{ marginBottom: 12 }}>
         <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 6 }}>Token address</label>
@@ -97,9 +97,9 @@ export function Deposit() {
           {balance !== undefined && (
             <span
               style={{ fontSize: 12, color: '#378ADD', cursor: 'pointer' }}
-              onClick={() => setAmount(formatUnits(balance, dec))}
+              onClick={() => setAmount(formatUnits(balance as bigint, dec))}
             >
-              Balance: {formatUnits(balance, dec)} {symbol}
+              Balance: {formatUnits(balance as bigint, dec)} {symbol}
             </span>
           )}
         </div>
@@ -119,7 +119,7 @@ export function Deposit() {
 
       {isSuccess && (
         <div style={{ background: '#1D9E7511', border: '1px solid #1D9E7544', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#1D9E75', marginBottom: '1rem' }}>
-          ✓ {hasAllowance ? 'Deposit successful' : 'Approval successful — now deposit'}
+          {hasAllowance ? 'Deposit successful' : 'Approval successful — now deposit'}
         </div>
       )}
 
@@ -127,14 +127,14 @@ export function Deposit() {
         <button
           onClick={handleApprove}
           disabled={isPending || isConfirming || hasAllowance}
-          style={{ background: hasAllowance ? '#1e1e2e' : '#EF9F27', color: hasAllowance ? '#475569' : '#fff', padding: '12px', fontWeight: 600 }}
+          style={{ background: hasAllowance ? '#1e1e2e' : '#EF9F27', color: hasAllowance ? '#475569' : '#fff', padding: '12px', fontWeight: 600, borderRadius: 8 }}
         >
-          {hasAllowance ? '✓ Approved' : isPending ? 'Confirm...' : '1. Approve'}
+          {hasAllowance ? 'Approved' : isPending ? 'Confirm...' : '1. Approve'}
         </button>
         <button
           onClick={handleDeposit}
           disabled={isPending || isConfirming || !hasAllowance}
-          style={{ background: !hasAllowance ? '#1e1e2e' : '#1D9E75', color: !hasAllowance ? '#475569' : '#fff', padding: '12px', fontWeight: 600 }}
+          style={{ background: !hasAllowance ? '#1e1e2e' : '#1D9E75', color: !hasAllowance ? '#475569' : '#fff', padding: '12px', fontWeight: 600, borderRadius: 8 }}
         >
           {isPending ? 'Confirm...' : isConfirming ? 'Depositing...' : '2. Deposit'}
         </button>
