@@ -85,7 +85,7 @@ export function ClaimInheritance() {
 
         <div style={{ marginBottom: 12 }}>
           <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 6 }}>
-            Vault owner's wallet address
+            Vault owner&apos;s wallet address
           </label>
           <input
             value={ownerAddress}

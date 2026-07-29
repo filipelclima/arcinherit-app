@@ -21,7 +21,7 @@ export function CheckIn() {
     <div style={{ background: '#13131a', border: '1px solid #1e1e2e', borderRadius: 12, padding: '1.5rem', marginBottom: '1.5rem' }}>
       <div style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9', marginBottom: 6 }}>I am alive ✓</div>
       <div style={{ fontSize: 13, color: '#64748b', marginBottom: '1.25rem', lineHeight: 1.7 }}>
-        Clicking this button resets your countdown. It's an onchain transaction that costs less than $0.01 and takes a few seconds. Do this once a year (or however often you set) to keep your vault protected.
+        Clicking this button resets your countdown. It&apos;s an onchain transaction that costs less than $0.01 and takes a few seconds. Do this once a year (or however often you set) to keep your vault protected.
       </div>
 
       {isSuccess && (

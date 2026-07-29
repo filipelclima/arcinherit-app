@@ -8,7 +8,6 @@ export function Deposit() {
   const { address } = useAccount()
   const [amount, setAmount] = useState('')
   const [tokenAddress, setTokenAddress] = useState(USDC_ADDRESS)
-  const [step, setStep] = useState<'approve' | 'deposit'>('approve')
   const [error, setError] = useState('')
 
   const { data: vault } = useReadContract({
