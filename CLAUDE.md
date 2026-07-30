@@ -35,13 +35,19 @@ dApp de herança onchain na Arc Network. Deixa o dono de uma vault designar herd
 4. **Manter dependências fixadas em versões exatas** (sem `^` ou `~`) ao adicionar ou atualizar pacotes.
 5. **Nunca usar `ignoreBuildErrors` ou `@ts-nocheck` como atalho** — sempre corrigir a causa raiz do erro de tipo.
 
+## Testes
+
+- Vitest `4.1.10` + Testing Library (`@testing-library/react`, `jest-dom`), ambiente `jsdom`.
+- Config: `vitest.config.mts` (extensão `.mts` de propósito — evita o warning do config loader nativo do Vite quando o `package.json` não é `"type": "module"`) + `vitest.setup.ts` (matchers do jest-dom + `cleanup()` explícito no `afterEach`, necessário porque o auto-cleanup do Testing Library depende de `globals: true`, que não está habilitado aqui).
+- Testes ficam colocados junto do componente (`Componente.test.tsx` ao lado de `Componente.tsx`).
+- Hooks do wagmi (`useAccount`, `useConnect`, `useDisconnect` etc.) devem ser mockados com `vi.mock('wagmi', () => ({...}))` — ver `ConnectWallet.test.tsx` como exemplo.
+
 ## Comandos
 
 ```bash
 npm run dev      # dev server
 npm run build    # build de produção — deve compilar sem erros/warnings de TS ou ESLint
+npm test         # roda a suíte de testes (vitest run)
 npx tsc --noEmit # typecheck isolado
 npx next lint    # lint isolado
 ```
-
-> **Nota:** ainda não há testes unitários configurados neste projeto (sem Vitest/Jest). Antes de aplicar a regra 1 numa mudança específica, configurar um test runner (Vitest é o mais natural para Next.js 14 + TS) e criar os primeiros testes.
