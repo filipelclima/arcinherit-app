@@ -26,6 +26,7 @@ describe('ConnectWallet', () => {
     fireEvent.click(button)
 
     expect(connect).toHaveBeenCalledWith({ connector })
+    expect(button).toHaveStyle({ whiteSpace: 'nowrap' })
   })
 
   it('shows the truncated address and a "Disconnect" button when connected', () => {

@@ -31,19 +31,19 @@ export default function Home() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       {/* Header */}
-      <div style={{ borderBottom: '1px solid #1e1e2e', padding: '1rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ borderBottom: '1px solid #1e1e2e', padding: '1rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9', letterSpacing: '-0.02em' }}>
+          <div style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
             Arc<span style={{ color: '#1D9E75' }}>Inherit</span>
           </div>
-          <div style={{ fontSize: 11, background: '#1D9E7522', border: '1px solid #1D9E7544', color: '#1D9E75', borderRadius: 6, padding: '2px 8px' }}>
+          <div style={{ fontSize: 11, background: '#1D9E7522', border: '1px solid #1D9E7544', color: '#1D9E75', borderRadius: 6, padding: '2px 8px', whiteSpace: 'nowrap' }}>
             Arc Testnet
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button
             onClick={() => setShowHowItWorks(!showHowItWorks)}
-            style={{ background: 'transparent', border: '1px solid #1e1e2e', color: '#64748b', padding: '6px 14px', fontSize: 13 }}
+            style={{ background: 'transparent', border: '1px solid #1e1e2e', color: '#64748b', padding: '6px 14px', fontSize: 13, whiteSpace: 'nowrap' }}
           >
             {showHowItWorks ? 'Hide guide' : 'How it works'}
           </button>

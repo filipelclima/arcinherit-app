@@ -8,7 +8,7 @@ export function ConnectWallet() {
 
   if (isConnected && address) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
         <div style={{
           background: '#1D9E7522',
           border: '1px solid #1D9E75',
@@ -16,13 +16,14 @@ export function ConnectWallet() {
           padding: '6px 14px',
           fontSize: 13,
           color: '#1D9E75',
-          fontFamily: 'monospace'
+          fontFamily: 'monospace',
+          whiteSpace: 'nowrap',
         }}>
           {address.slice(0, 6)}...{address.slice(-4)}
         </div>
         <button
           onClick={() => disconnect()}
-          style={{ background: 'transparent', border: '1px solid #1e1e2e', color: '#64748b', padding: '6px 14px', fontSize: 13 }}
+          style={{ background: 'transparent', border: '1px solid #1e1e2e', color: '#64748b', padding: '6px 14px', fontSize: 13, whiteSpace: 'nowrap' }}
         >
           Disconnect
         </button>
@@ -36,7 +37,7 @@ export function ConnectWallet() {
   return (
     <button
       onClick={() => connector && connect({ connector })}
-      style={{ background: '#1D9E75', color: '#fff', padding: '8px 20px', fontSize: 14, fontWeight: 600 }}
+      style={{ background: '#1D9E75', color: '#fff', padding: '8px 20px', fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}
     >
       Connect Wallet
     </button>
