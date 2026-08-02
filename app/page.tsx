@@ -33,7 +33,8 @@ export default function Home() {
       {/* Header */}
       <div style={{ borderBottom: '1px solid #1e1e2e', padding: '1rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 22, fontWeight: 700, color: '#f1f5f9', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
+            <span aria-hidden="true" data-testid="header-logo-icon">🔐</span>
             Arc<span style={{ color: '#1D9E75' }}>Inherit</span>
           </div>
           <div style={{ fontSize: 11, background: '#1D9E7522', border: '1px solid #1D9E7544', color: '#1D9E75', borderRadius: 6, padding: '2px 8px', whiteSpace: 'nowrap' }}>

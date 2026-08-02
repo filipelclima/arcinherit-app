@@ -27,4 +27,13 @@ describe('Home header', () => {
     const header = rightGroup?.parentElement
     expect(header).toHaveStyle({ flexWrap: 'wrap' })
   })
+
+  it('shows a lock emoji next to the ArcInherit logo in the header', () => {
+    mockUseAccount.mockReturnValue({ address: undefined, isConnected: false } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+
+    render(<Home />)
+
+    expect(screen.getByTestId('header-logo-icon')).toHaveTextContent('🔐')
+  })
 })
