@@ -24,7 +24,23 @@ export function CreateVault({ onCreated }: { onCreated: () => void }) {
   const { writeContract, data: hash, isPending } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
 
-  if (isSuccess) { onCreated(); return null }
+  if (isSuccess) {
+    return (
+      <div style={{ background: '#13131a', border: '1px solid #1D9E75', borderRadius: 12, padding: '2rem 1.5rem', marginBottom: '1.5rem', textAlign: 'center' }}>
+        <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: '#f1f5f9', marginBottom: 8 }}>Vault created!</div>
+        <div style={{ fontSize: 14, color: '#94a3b8', marginBottom: '1.5rem', lineHeight: 1.6 }}>
+          Now deposit tokens to protect your inheritance.
+        </div>
+        <button
+          onClick={onCreated}
+          style={{ background: '#1D9E75', color: '#fff', padding: '12px 24px', fontWeight: 700, fontSize: 15, borderRadius: 10 }}
+        >
+          Continue to deposit →
+        </button>
+      </div>
+    )
+  }
   if (existingVault && existingVault[3]) return null
 
   const totalPct = heirs.reduce((s, h) => s + (h.percentage || 0), 0)
