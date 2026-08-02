@@ -54,6 +54,13 @@ export function VaultStatus() {
   const nextDeadline = new Date((Number(lastCheckIn) + Number(timelockDuration)) * 1000)
   const timeInfo = timeLeft !== undefined ? formatTimeLeft(timeLeft) : null
 
+  const elapsedSeconds = Math.max(0, Date.now() / 1000 - Number(lastCheckIn))
+  const totalSeconds = Number(timelockDuration)
+  const pctElapsed = totalSeconds > 0 ? Math.min(100, (elapsedSeconds / totalSeconds) * 100) : 100
+  const daysElapsed = Math.min(Math.floor(elapsedSeconds / 86400), Math.round(totalSeconds / 86400))
+  const daysTotal = Math.round(totalSeconds / 86400)
+  const progressColor = pctElapsed >= 100 ? '#ef4444' : pctElapsed >= 70 ? '#EF9F27' : '#1D9E75'
+
   return (
     <div style={{ marginBottom: '1.5rem' }}>
       {/* Urgent warning */}
@@ -101,6 +108,25 @@ export function VaultStatus() {
             <div style={{ fontSize: 14, fontWeight: 500, color: timeInfo?.urgent ? '#EF9F27' : '#f1f5f9' }}>
               {nextDeadline.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </div>
+          </div>
+        </div>
+
+        <div style={{ marginBottom: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span style={{ fontSize: 11, color: '#475569' }}>Check-in period used</span>
+            <span style={{ fontSize: 11, color: '#64748b' }}>{daysElapsed} / {daysTotal} days</span>
+          </div>
+          <div style={{ background: '#0a0a0f', borderRadius: 999, height: 8, overflow: 'hidden' }}>
+            <div
+              data-testid="checkin-progress-bar"
+              style={{
+                width: `${pctElapsed}%`,
+                height: '100%',
+                background: progressColor,
+                borderRadius: 999,
+                transition: 'width 0.3s ease',
+              }}
+            />
           </div>
         </div>
 
