@@ -2,7 +2,7 @@
 
 dApp de herança onchain na Arc Network. Deixa o dono de uma vault designar herdeiros para seus tokens ERC-20; se ele parar de fazer check-in (prova de vida), os herdeiros podem reivindicar sua parte após o timelock + grace period expirarem.
 
-- **Deploy:** https://arcinherit-app-vpip.vercel.app (Vercel, projetos `arcinherit-app` e `arcinherit-app-vpip`)
+- **Deploy:** https://arcinherit-app.vercel.app (Vercel, projeto `arcinherit-app` — o projeto duplicado `arcinherit-app-vpip` foi deletado)
 - **GitHub:** https://github.com/filipelclima/arcinherit-app
 - **Contrato:** [ArcInherit](https://github.com/filipelclima/ArcInherit) — deployado e verificado na Arc Testnet em `0xdb7875DBfDe3A5C4763C11eF15f972C26E3D8818`
 
