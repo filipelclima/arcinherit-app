@@ -1,11 +1,11 @@
 'use client'
 import { useState } from 'react'
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
-import { CONTRACT_ADDRESS, ABI } from '@/lib/contract'
+import { ARC_TESTNET, CONTRACT_ADDRESS, ABI } from '@/lib/contract'
 import { isAddress } from 'viem'
 
 export function ClaimInheritance() {
-  const { address, chain } = useAccount()
+  const { address } = useAccount()
   const [ownerAddress, setOwnerAddress] = useState('')
   const [tokenAddress, setTokenAddress] = useState('')
   const [error, setError] = useState('')
@@ -39,7 +39,7 @@ export function ClaimInheritance() {
 
   function handleClaim() {
     setError('')
-    if (!address || !chain) return setError('Connect your wallet first')
+    if (!address) return setError('Connect your wallet first')
     if (!isAddress(ownerAddress)) return setError('Please enter a valid wallet address for the vault owner')
     if (!isAddress(tokenAddress)) return setError('Please enter a valid token contract address')
     if (!canClaim) return setError('This vault is not yet available for claiming')
@@ -49,7 +49,7 @@ export function ClaimInheritance() {
       functionName: 'claimInheritance',
       args: [ownerAddress as `0x${string}`, tokenAddress as `0x${string}`],
       account: address,
-      chain,
+      chain: ARC_TESTNET,
     })
   }
 

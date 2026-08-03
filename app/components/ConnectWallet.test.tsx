@@ -44,4 +44,41 @@ describe('ConnectWallet', () => {
     fireEvent.click(screen.getByText('Disconnect'))
     expect(disconnect).toHaveBeenCalled()
   })
+
+  it('lets the user pick a specific wallet when more than one is detected (EIP-6963 multi-wallet)', () => {
+    const connect = vi.fn()
+    const metaMask = { uid: 'a', id: 'metaMask', name: 'MetaMask' }
+    const rabby = { uid: 'b', id: 'rabby', name: 'Rabby Wallet' }
+    mockUseAccount.mockReturnValue({ address: undefined, isConnected: false } as any)
+    mockUseConnect.mockReturnValue({ connect, connectors: [metaMask, rabby] } as any)
+    mockUseDisconnect.mockReturnValue({ disconnect: vi.fn() } as any)
+
+    render(<ConnectWallet />)
+
+    // Neither wallet name should be visible until the user opens the picker.
+    expect(screen.queryByText('MetaMask')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByText('Connect Wallet'))
+
+    expect(screen.getByText('MetaMask')).toBeInTheDocument()
+    expect(screen.getByText('Rabby Wallet')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByText('Rabby Wallet'))
+    expect(connect).toHaveBeenCalledWith({ connector: rabby })
+  })
+
+  it('prefers named EIP-6963 wallets over the generic "injected" connector when both are available', () => {
+    const connect = vi.fn()
+    const generic = { uid: 'a', id: 'injected', name: 'Injected' }
+    const metaMask = { uid: 'b', id: 'metaMask', name: 'MetaMask' }
+    mockUseAccount.mockReturnValue({ address: undefined, isConnected: false } as any)
+    mockUseConnect.mockReturnValue({ connect, connectors: [generic, metaMask] } as any)
+    mockUseDisconnect.mockReturnValue({ disconnect: vi.fn() } as any)
+
+    render(<ConnectWallet />)
+
+    // Only one named wallet is available once the generic entry is filtered out,
+    // so it connects directly instead of showing a picker.
+    fireEvent.click(screen.getByText('Connect Wallet'))
+    expect(connect).toHaveBeenCalledWith({ connector: metaMask })
+  })
 })

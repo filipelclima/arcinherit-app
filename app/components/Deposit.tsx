@@ -1,11 +1,11 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
-import { CONTRACT_ADDRESS, ABI, USDC_ADDRESS, ERC20_ABI } from '@/lib/contract'
+import { ARC_TESTNET, CONTRACT_ADDRESS, ABI, USDC_ADDRESS, ERC20_ABI } from '@/lib/contract'
 import { parseUnits, formatUnits } from 'viem'
 
 export function Deposit() {
-  const { address, chain } = useAccount()
+  const { address } = useAccount()
   const [amount, setAmount] = useState('')
   const [tokenAddress, setTokenAddress] = useState<string>(USDC_ADDRESS)
   const [error, setError] = useState('')
@@ -61,7 +61,7 @@ export function Deposit() {
 
   function handleApprove() {
     setError('')
-    if (!address || !chain) return setError('Connect your wallet first')
+    if (!address) return setError('Connect your wallet first')
     if (!amount || parsedAmount <= BigInt(0)) return setError('Enter an amount')
     writeContract({
       address: tokenAddress as `0x${string}`,
@@ -69,13 +69,13 @@ export function Deposit() {
       functionName: 'approve',
       args: [CONTRACT_ADDRESS, parsedAmount],
       account: address,
-      chain,
+      chain: ARC_TESTNET,
     })
   }
 
   function handleDeposit() {
     setError('')
-    if (!address || !chain) return setError('Connect your wallet first')
+    if (!address) return setError('Connect your wallet first')
     if (!amount || parsedAmount <= BigInt(0)) return setError('Enter an amount')
     writeContract({
       address: CONTRACT_ADDRESS,
@@ -83,7 +83,7 @@ export function Deposit() {
       functionName: 'deposit',
       args: [tokenAddress as `0x${string}`, parsedAmount],
       account: address,
-      chain,
+      chain: ARC_TESTNET,
     })
   }
 

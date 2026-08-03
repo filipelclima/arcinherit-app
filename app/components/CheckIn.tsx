@@ -1,9 +1,9 @@
 'use client'
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
-import { CONTRACT_ADDRESS, ABI } from '@/lib/contract'
+import { ARC_TESTNET, CONTRACT_ADDRESS, ABI } from '@/lib/contract'
 
 export function CheckIn() {
-  const { address, chain } = useAccount()
+  const { address } = useAccount()
   const { writeContract, data: hash, isPending } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
 
@@ -30,8 +30,8 @@ export function CheckIn() {
       )}
       <button
         onClick={() => {
-          if (!address || !chain) return
-          writeContract({ address: CONTRACT_ADDRESS, abi: ABI, functionName: 'checkIn', account: address, chain })
+          if (!address) return
+          writeContract({ address: CONTRACT_ADDRESS, abi: ABI, functionName: 'checkIn', account: address, chain: ARC_TESTNET })
         }}
         disabled={isPending || isConfirming}
         style={{ background: '#378ADD', color: '#fff', width: '100%', padding: '14px', fontWeight: 700, fontSize: 15, borderRadius: 10 }}

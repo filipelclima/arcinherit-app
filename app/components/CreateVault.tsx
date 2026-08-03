@@ -1,13 +1,13 @@
 'use client'
 import { useState } from 'react'
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
-import { CONTRACT_ADDRESS, ABI } from '@/lib/contract'
+import { ARC_TESTNET, CONTRACT_ADDRESS, ABI } from '@/lib/contract'
 import { InfoIcon } from './Tooltip'
 
 interface Heir { wallet: string; percentage: number }
 
 export function CreateVault({ onCreated }: { onCreated: () => void }) {
-  const { address, chain } = useAccount()
+  const { address } = useAccount()
   const [timelockDays, setTimelockDays] = useState(365)
   const [graceDays, setGraceDays] = useState(30)
   const [heirs, setHeirs] = useState<Heir[]>([{ wallet: '', percentage: 100 }])
@@ -55,7 +55,7 @@ export function CreateVault({ onCreated }: { onCreated: () => void }) {
 
   function handleCreate() {
     setError('')
-    if (!address || !chain) return setError('Connect your wallet first')
+    if (!address) return setError('Connect your wallet first')
     if (timelockDays < 30) return setError('Minimum check-in period is 30 days')
     if (graceDays < 7) return setError('Minimum safety window is 7 days')
     if (heirs.some(h => !h.wallet || !h.wallet.startsWith('0x'))) return setError('All heir wallet addresses must start with 0x and be valid')
@@ -71,7 +71,7 @@ export function CreateVault({ onCreated }: { onCreated: () => void }) {
         heirs.map(h => ({ wallet: h.wallet as `0x${string}`, percentage: h.percentage }))
       ],
       account: address,
-      chain,
+      chain: ARC_TESTNET,
     })
   }
 

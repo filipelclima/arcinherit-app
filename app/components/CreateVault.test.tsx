@@ -35,6 +35,31 @@ describe('CreateVault', () => {
     expect(onCreated).toHaveBeenCalled()
   })
 
+  it('lets a connected wallet create a vault even when useAccount().chain is undefined (e.g. wallet active on a different network)', () => {
+    const writeContract = vi.fn()
+    const address = '0x1111111111111111111111111111111111111111'
+
+    // This is the exact bug scenario: address is present (wallet IS connected — the header
+    // shows it fine) but wagmi's useAccount().chain resolves to undefined whenever the wallet's
+    // current chain isn't one wagmi recognizes from our config's chain list.
+    mockUseAccount.mockReturnValue({ address, chain: undefined } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+    mockUseWriteContract.mockReturnValue({ writeContract, data: undefined, isPending: false } as any)
+    mockUseWaitForTransactionReceipt.mockReturnValue({ isLoading: false, isSuccess: false } as any)
+
+    render(<CreateVault onCreated={vi.fn()} />)
+
+    fireEvent.change(screen.getByPlaceholderText('Heir 1 — wallet address (0x...)'), {
+      target: { value: '0x2222222222222222222222222222222222222222' },
+    })
+    fireEvent.click(screen.getByText('Create my inheritance vault →'))
+
+    expect(screen.queryByText('Connect your wallet first')).not.toBeInTheDocument()
+    expect(writeContract).toHaveBeenCalledTimes(1)
+    expect(writeContract.mock.calls[0][0]).toMatchObject({ account: address })
+    expect(writeContract.mock.calls[0][0].chain).toBeDefined()
+  })
+
   it('renders the create-vault form (not the success screen) before any transaction has succeeded', () => {
     mockUseAccount.mockReturnValue({ address: '0x1111111111111111111111111111111111111111', chain: { id: 5042002 } } as any)
     mockUseReadContract.mockReturnValue({ data: undefined } as any)

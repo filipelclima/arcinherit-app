@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from 'wagmi'
 import { Deposit } from './Deposit'
 
@@ -50,5 +50,42 @@ describe('Deposit', () => {
     rerender(<Deposit />)
 
     expect(refetchAllowance).toHaveBeenCalled()
+  })
+
+  it('lets a connected wallet approve/deposit even when useAccount().chain is undefined (e.g. wallet active on a different network)', () => {
+    const writeContract = vi.fn()
+    const address = '0x1111111111111111111111111111111111111111'
+
+    // Same bug scenario as CreateVault: address present, chain undefined.
+    mockUseAccount.mockReturnValue({ address, chain: undefined } as any)
+    mockUseWriteContract.mockReturnValue({ writeContract, data: undefined, isPending: false } as any)
+    mockUseWaitForTransactionReceipt.mockReturnValue({ isLoading: false, isSuccess: false } as any)
+
+    mockUseReadContract.mockImplementation(((params: any) => {
+      switch (params.functionName) {
+        case 'getVault':
+          return { data: [0n, 0n, 0n, true, []] }
+        case 'decimals':
+          return { data: 6 }
+        case 'symbol':
+          return { data: 'USDC' }
+        case 'balanceOf':
+          return { data: 1000n }
+        case 'allowance':
+          return { data: 0n, refetch: vi.fn() }
+        default:
+          return { data: undefined }
+      }
+    }) as any)
+
+    render(<Deposit />)
+
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '10' } })
+    fireEvent.click(screen.getByText('1. Approve'))
+
+    expect(screen.queryByText('Connect your wallet first')).not.toBeInTheDocument()
+    expect(writeContract).toHaveBeenCalledTimes(1)
+    expect(writeContract.mock.calls[0][0]).toMatchObject({ account: address })
+    expect(writeContract.mock.calls[0][0].chain).toBeDefined()
   })
 })
