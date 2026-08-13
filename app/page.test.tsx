@@ -28,12 +28,14 @@ describe('Home header', () => {
     expect(header).toHaveStyle({ flexWrap: 'wrap' })
   })
 
-  it('shows a lock emoji next to the ArcInherit logo in the header', () => {
+  it('shows the ArcInherit logo image next to the wordmark in the header', () => {
     mockUseAccount.mockReturnValue({ address: undefined, isConnected: false } as any)
     mockUseReadContract.mockReturnValue({ data: undefined } as any)
 
     render(<Home />)
 
-    expect(screen.getByTestId('header-logo-icon')).toHaveTextContent('🔐')
+    const logo = screen.getByTestId('header-logo-icon')
+    expect(logo.tagName).toBe('IMG')
+    expect(logo).toHaveAttribute('src', '/arcinherit-icon.png')
   })
 })
