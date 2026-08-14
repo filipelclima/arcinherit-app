@@ -9,6 +9,7 @@ import { CheckIn } from './components/CheckIn'
 import { Deposit } from './components/Deposit'
 import { ClaimInheritance } from './components/ClaimInheritance'
 import { CONTRACT_ADDRESS, ABI } from '@/lib/contract'
+import { ARC_GRADIENT, COLOR_BG, COLOR_BG_SUBTLE, COLOR_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY, COLOR_TEXT_TERTIARY } from '@/lib/theme'
 
 type Tab = 'owner' | 'heir'
 
@@ -31,21 +32,21 @@ export default function Home() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       {/* Header */}
-      <div style={{ borderBottom: '1px solid #1e1e2e', padding: '1rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+      <div style={{ background: COLOR_BG, borderBottom: `1px solid ${COLOR_BORDER}`, padding: '1rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 22, fontWeight: 700, color: '#f1f5f9', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 22, fontWeight: 700, color: COLOR_TEXT_PRIMARY, letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
             {/* eslint-disable-next-line @next/next/no-img-element -- small static header logo, next/image's optimizer isn't needed here */}
             <img src="/heirloom-icon.png" alt="" aria-hidden="true" data-testid="header-logo-icon" width={24} height={24} style={{ display: 'block' }} />
-            <span style={{ color: '#1D9E75' }}>Heir</span>loom
+            <span style={{ backgroundImage: ARC_GRADIENT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Heir</span>loom
           </div>
-          <div style={{ fontSize: 11, background: '#1D9E7522', border: '1px solid #1D9E7544', color: '#1D9E75', borderRadius: 6, padding: '2px 8px', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: 11, background: COLOR_BG_SUBTLE, border: `1px solid ${COLOR_BORDER}`, color: COLOR_TEXT_SECONDARY, borderRadius: 6, padding: '2px 8px', whiteSpace: 'nowrap' }}>
             Arc Testnet
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button
             onClick={() => setShowHowItWorks(!showHowItWorks)}
-            style={{ background: 'transparent', border: '1px solid #1e1e2e', color: '#64748b', padding: '6px 14px', fontSize: 13, whiteSpace: 'nowrap' }}
+            style={{ background: 'transparent', border: `1px solid ${COLOR_BORDER}`, color: COLOR_TEXT_SECONDARY, padding: '6px 14px', fontSize: 13, whiteSpace: 'nowrap', borderRadius: 8 }}
           >
             {showHowItWorks ? 'Hide guide' : 'How it works'}
           </button>
@@ -53,25 +54,36 @@ export default function Home() {
         </div>
       </div>
 
+      {!isConnected && (
+        /* Hero */
+        <div style={{ background: COLOR_BG, borderBottom: `1px solid ${COLOR_BORDER}` }}>
+          <div style={{ maxWidth: 700, margin: '0 auto', padding: '4rem 1rem', textAlign: 'center' }}>
+            <div style={{
+              display: 'inline-block', background: ARC_GRADIENT, color: '#fff', fontSize: 13, fontWeight: 600,
+              borderRadius: 9999, padding: '6px 16px', marginBottom: 20, whiteSpace: 'nowrap',
+            }}>
+              Built on Arc
+            </div>
+            <div style={{ fontSize: 46, fontWeight: 800, color: COLOR_TEXT_PRIMARY, marginBottom: 16, letterSpacing: '-0.03em', lineHeight: 1.15 }}>
+              Your crypto.<br />
+              <span style={{ backgroundImage: ARC_GRADIENT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Your heirs.</span>
+            </div>
+            <div style={{ fontSize: 16, color: COLOR_TEXT_SECONDARY, marginBottom: 12, maxWidth: 500, margin: '0 auto 12px', lineHeight: 1.7 }}>
+              Set up an onchain inheritance vault in minutes. If you stop checking in, your designated heirs can claim their share automatically — no lawyers, no paperwork, no middlemen.
+            </div>
+            <div style={{ fontSize: 13, color: COLOR_TEXT_TERTIARY, marginBottom: 32 }}>
+              Built on Arc · Non-custodial · Immutable · Less than $0.01 per transaction
+            </div>
+            <ConnectWallet size="lg" />
+          </div>
+        </div>
+      )}
+
       <div style={{ maxWidth: 700, margin: '0 auto', padding: '2rem 1rem' }}>
 
         {!isConnected ? (
           /* Landing */
           <div>
-            <div style={{ textAlign: 'center', padding: '3rem 0 2rem' }}>
-              <div style={{ fontSize: 42, fontWeight: 800, color: '#f1f5f9', marginBottom: 16, letterSpacing: '-0.03em', lineHeight: 1.15 }}>
-                Your crypto.<br />
-                <span style={{ color: '#1D9E75' }}>Your heirs.</span>
-              </div>
-              <div style={{ fontSize: 16, color: '#64748b', marginBottom: 12, maxWidth: 500, margin: '0 auto 12px', lineHeight: 1.7 }}>
-                Set up an onchain inheritance vault in minutes. If you stop checking in, your designated heirs can claim their share automatically — no lawyers, no paperwork, no middlemen.
-              </div>
-              <div style={{ fontSize: 13, color: '#475569', marginBottom: 32 }}>
-                Built on Arc · Non-custodial · Immutable · Less than $0.01 per transaction
-              </div>
-              <ConnectWallet />
-            </div>
-
             {showHowItWorks && <HowItWorks />}
 
             {/* FAQ */}
