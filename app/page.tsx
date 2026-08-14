@@ -72,7 +72,7 @@ export default function Home() {
               <ConnectWallet />
             </div>
 
-            <HowItWorks />
+            {showHowItWorks && <HowItWorks />}
 
             {/* FAQ */}
             <div style={{ background: '#13131a', border: '1px solid #1e1e2e', borderRadius: 12, padding: '1.5rem', marginBottom: '2rem' }}>
