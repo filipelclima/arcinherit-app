@@ -35,8 +35,8 @@ export default function Home() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 22, fontWeight: 700, color: '#f1f5f9', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
             {/* eslint-disable-next-line @next/next/no-img-element -- small static header logo, next/image's optimizer isn't needed here */}
-            <img src="/arcinherit-icon.png" alt="" aria-hidden="true" data-testid="header-logo-icon" width={24} height={24} style={{ display: 'block' }} />
-            Arc<span style={{ color: '#1D9E75' }}>Inherit</span>
+            <img src="/heirloom-icon.png" alt="" aria-hidden="true" data-testid="header-logo-icon" width={24} height={24} style={{ display: 'block' }} />
+            <span style={{ color: '#1D9E75' }}>Heir</span>loom
           </div>
           <div style={{ fontSize: 11, background: '#1D9E7522', border: '1px solid #1D9E7544', color: '#1D9E75', borderRadius: 6, padding: '2px 8px', whiteSpace: 'nowrap' }}>
             Arc Testnet
@@ -95,7 +95,7 @@ export default function Home() {
                   a: 'Any ERC-20 token on the Arc network — including USDC, EURC, and any other token that gets deployed on Arc.'
                 },
                 {
-                  q: 'Do I need to trust ArcInherit?',
+                  q: 'Do I need to trust Heirloom?',
                   a: 'No. The contract is immutable — not even the developers can access your funds or change the rules. You can read the verified contract code on Blockscout.'
                 },
               ].map((item, i) => (

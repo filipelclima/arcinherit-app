@@ -28,7 +28,7 @@ describe('Home header', () => {
     expect(header).toHaveStyle({ flexWrap: 'wrap' })
   })
 
-  it('shows the ArcInherit logo image next to the wordmark in the header', () => {
+  it('shows the Heirloom logo image next to the wordmark in the header', () => {
     mockUseAccount.mockReturnValue({ address: undefined, isConnected: false } as any)
     mockUseReadContract.mockReturnValue({ data: undefined } as any)
 
@@ -36,7 +36,7 @@ describe('Home header', () => {
 
     const logo = screen.getByTestId('header-logo-icon')
     expect(logo.tagName).toBe('IMG')
-    expect(logo).toHaveAttribute('src', '/arcinherit-icon.png')
+    expect(logo).toHaveAttribute('src', '/heirloom-icon.png')
   })
 
   it('toggles the "How it works" guide on the landing page (disconnected) when the header button is clicked', () => {

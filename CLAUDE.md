@@ -1,6 +1,8 @@
-# ArcInherit — Frontend
+# Heirloom — Frontend
 
 dApp de herança onchain na Arc Network. Deixa o dono de uma vault designar herdeiros para seus tokens ERC-20; se ele parar de fazer check-in (prova de vida), os herdeiros podem reivindicar sua parte após o timelock + grace period expirarem.
+
+> **Rebrand (2026-08-14):** o produto se chamava "ArcInherit" e passou a se chamar **"Heirloom"** — só o nome/marca exibido na UI mudou. O repo (`arcinherit-app`), a URL de deploy e o contrato onchain (ainda chamado `ArcInherit` no GitHub/Blockscout) **não** foram renomeados, de propósito. Não estranhar essa mistura de nomes entre o frontend (Heirloom) e o contrato (ArcInherit) — é intencional por enquanto.
 
 - **Deploy:** https://arcinherit-app.vercel.app (Vercel, projeto `arcinherit-app` — o projeto duplicado `arcinherit-app-vpip` foi deletado)
 - **GitHub:** https://github.com/filipelclima/arcinherit-app

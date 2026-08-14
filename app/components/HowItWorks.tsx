@@ -37,7 +37,7 @@ export function HowItWorks() {
       <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
         <div style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9', marginBottom: 8 }}>How it works</div>
         <div style={{ fontSize: 14, color: '#64748b', maxWidth: 480, margin: '0 auto' }}>
-          ArcInherit is a smart contract on the Arc blockchain. No company controls it — the code runs itself, forever.
+          Heirloom is a smart contract on the Arc blockchain. No company controls it — the code runs itself, forever.
         </div>
       </div>
 
@@ -77,7 +77,7 @@ export function HowItWorks() {
             Nobody has a master key — not even us
           </div>
           <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6 }}>
-            ArcInherit is an immutable smart contract. Once deployed, no one — not the developers, not Arc, not Circle — can access, freeze, or change the rules of your vault. Your funds follow the rules you set, enforced by code alone.
+            Heirloom is an immutable smart contract. Once deployed, no one — not the developers, not Arc, not Circle — can access, freeze, or change the rules of your vault. Your funds follow the rules you set, enforced by code alone.
           </div>
         </div>
       </div>

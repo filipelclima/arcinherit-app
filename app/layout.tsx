@@ -6,7 +6,7 @@ import { Providers } from './providers'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'ArcInherit — Onchain Inheritance Vault',
+  title: 'Heirloom — Onchain Inheritance Vault',
   description: 'Decentralized inheritance vault for ERC-20 tokens on Arc Network. Non-custodial, immutable, timelock-based.',
 }
 
