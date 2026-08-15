@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useAccount, useReadContract } from 'wagmi'
 import { ConnectWallet } from './components/ConnectWallet'
+import { RebrandBanner } from './components/RebrandBanner'
 import { HowItWorks } from './components/HowItWorks'
 import { VaultStatus } from './components/VaultStatus'
 import { CreateVault } from './components/CreateVault'
@@ -33,6 +34,8 @@ export default function Home() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+      <RebrandBanner />
+
       {/* Header */}
       <div style={{ background: COLOR_BG, borderBottom: `1px solid ${COLOR_BORDER}`, padding: '1rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
