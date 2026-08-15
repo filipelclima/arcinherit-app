@@ -23,13 +23,19 @@ dApp de herança onchain na Arc Network. Deixa o dono de uma vault designar herd
 - `lib/theme.ts` — tokens do novo design system claro (ver seção "Redesign visual" abaixo)
 - `app/components/` — `CreateVault`, `Deposit`, `CheckIn`, `ClaimInheritance`, `VaultStatus`, `ConnectWallet`, `HowItWorks`
 
-## Redesign visual (em andamento, por partes)
+## Redesign visual (concluído, feito por partes)
 
-Migração de tema escuro pra um design system claro, inspirado no estilo do [Aqueduct](https://aqueduct-tau.vercel.app) (badge pill, header limpo, CTA arredondado), com as cores oficiais da Arc como accent — gradiente `linear-gradient(135deg, #001767, #73112C)` (navy → wine), definido em `lib/theme.ts` (`ARC_GRADIENT`, `COLOR_BG`, `COLOR_BG_SUBTLE`, `COLOR_TEXT_PRIMARY`, `COLOR_TEXT_SECONDARY`, `COLOR_TEXT_TERTIARY`, `COLOR_BORDER`).
+Migração de tema escuro pra um design system claro, inspirado no estilo do [Aqueduct](https://aqueduct-tau.vercel.app) (badge pill, header limpo, CTA arredondado), com as cores oficiais da Arc como accent — gradiente `linear-gradient(135deg, #001767, #73112C)` (navy → wine). Tokens em `lib/theme.ts`:
+- `ARC_GRADIENT` / `COLOR_ACCENT` (sólido, navy — pra bordas/foco/ícones onde gradiente não rola) / `COLOR_ACCENT_TINT` (navy a 8% de opacidade, fundo de chips de ícone)
+- `COLOR_BG` / `COLOR_BG_SUBTLE` / `COLOR_BORDER` / `COLOR_TEXT_PRIMARY` / `COLOR_TEXT_SECONDARY` / `COLOR_TEXT_TERTIARY`
+- `COLOR_SUCCESS` / `COLOR_WARNING` / `COLOR_DANGER` (+ suas variantes `_BG`/`_BORDER`) — cores semânticas, **de propósito fora** do gradiente de marca (sucesso/aviso/perigo têm significado próprio, não devem virar "azul-vinho" só porque é a cor de destaque)
 
-- **Parte 1 (feita, 2026-08-14):** Header + Hero da landing. Ambos ganharam fundo branco (`COLOR_BG`) explícito próprio — **não** mudei a variável global `--bg`/`var(--bg)` em `globals.css`, que continua escura, porque o resto do app (FAQ, `HowItWorks`, form de criar vault, footer) ainda usa texto claro (`#f1f5f9` etc.) pensado pra um fundo escuro; mudar o `--bg` global agora deixaria esse texto ilegível (branco sobre branco) antes da Parte 2 redesenhar essas seções também. Por isso o Hero virou uma seção full-width própria (fora do wrapper `maxWidth:700` original) posicionada entre o Header e o resto do conteúdo, que continua escuro sem nenhuma mudança.
-- **Pendente (Parte 2):** cards de FAQ, formulário de criação de vault, estados vazios, footer, `HowItWorks` — aí sim faz sentido migrar o `--bg` global e os textos dessas seções junto.
-- `ConnectWallet` ganhou uma prop opcional `size?: 'md' | 'lg'` (default `'md'`) — usada com `'lg'` só no CTA do Hero, pra ficar maior que a versão do header sem duplicar o componente.
+- **Parte 1 (2026-08-14):** Header + Hero da landing.
+- **Parte 2 (2026-08-14):** resto do app — FAQ, `HowItWorks` (emojis dos 4 passos + garantia trocados por SVGs inline estilo Lucide, dentro de chips circulares com `COLOR_ACCENT_TINT`; `lucide-react` não estava instalado no projeto, optei por SVG inline em vez de adicionar a dependência), formulário de criar vault, `VaultStatus` (barra de progresso do countdown), `Deposit`, `CheckIn`, `ClaimInheritance`, `Tooltip`/`InfoIcon`, Tabs (My Vault/Claim), footer (reestruturado em 2 colunas: logo+tagline à esquerda, links à direita). A variável global `--bg` em `globals.css` virou branca junto (não tinha mais nada dependendo dela ficar escura).
+  - **Barra de progresso do countdown:** usa `ARC_GRADIENT` como cor padrão (< 70% do período), mas mantém `COLOR_WARNING` (70-99%) e `COLOR_DANGER` (100%+) nos estados de urgência — decisão deliberada pra não perder o sinal de "atenção, checar in logo" que uma barra sempre-gradiente esconderia.
+  - **Botões de seleção/estado ativo** (timelock, safety window, Tabs) usam `ARC_GRADIENT` no estado ativo; inativo vira `COLOR_BG_SUBTLE` + borda `COLOR_BORDER`.
+  - **"Estados vazios antes de conectar wallet"** (item do pedido da Parte 2) não tinha nenhuma tela concreta no código pra redesenhar — o app já só mostra o Hero (Parte 1) quando desconectado, nenhum componente (`CreateVault`, `Deposit`, etc.) chega a renderizar nesse estado. Tratado como já coberto pela Parte 1, sem inventar uma tela especulativa sem uso real.
+- `ConnectWallet` tem uma prop opcional `size?: 'md' | 'lg'` (default `'md'`) — usada com `'lg'` só no CTA do Hero, pra ficar maior que a versão do header sem duplicar o componente.
 
 ## Armadilhas conhecidas (não repetir)
 

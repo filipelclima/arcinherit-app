@@ -11,6 +11,8 @@ import { ClaimInheritance } from './components/ClaimInheritance'
 import { CONTRACT_ADDRESS, ABI } from '@/lib/contract'
 import { ARC_GRADIENT, COLOR_BG, COLOR_BG_SUBTLE, COLOR_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY, COLOR_TEXT_TERTIARY } from '@/lib/theme'
 
+const CONTRACT_EXPLORER_URL = `https://testnet.arcscan.app/address/${CONTRACT_ADDRESS}`
+
 type Tab = 'owner' | 'heir'
 
 export default function Home() {
@@ -87,8 +89,8 @@ export default function Home() {
             {showHowItWorks && <HowItWorks />}
 
             {/* FAQ */}
-            <div style={{ background: '#13131a', border: '1px solid #1e1e2e', borderRadius: 12, padding: '1.5rem', marginBottom: '2rem' }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9', marginBottom: '1.25rem' }}>Common questions</div>
+            <div style={{ background: COLOR_BG, border: `1px solid ${COLOR_BORDER}`, borderRadius: 12, padding: '1.5rem', marginBottom: '2rem' }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: COLOR_TEXT_PRIMARY, marginBottom: '1.25rem' }}>Common questions</div>
               {[
                 {
                   q: 'What happens to my funds if I die without checking in?',
@@ -111,9 +113,9 @@ export default function Home() {
                   a: 'No. The contract is immutable — not even the developers can access your funds or change the rules. You can read the verified contract code on Blockscout.'
                 },
               ].map((item, i) => (
-                <div key={i} style={{ marginBottom: i < 4 ? '1rem' : 0, paddingBottom: i < 4 ? '1rem' : 0, borderBottom: i < 4 ? '1px solid #1e1e2e' : 'none' }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#f1f5f9', marginBottom: 6 }}>{item.q}</div>
-                  <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7 }}>{item.a}</div>
+                <div key={i} style={{ marginBottom: i < 4 ? '1rem' : 0, paddingBottom: i < 4 ? '1rem' : 0, borderBottom: i < 4 ? `1px solid ${COLOR_BORDER}` : 'none' }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: COLOR_TEXT_PRIMARY, marginBottom: 6 }}>{item.q}</div>
+                  <div style={{ fontSize: 13, color: COLOR_TEXT_SECONDARY, lineHeight: 1.7 }}>{item.a}</div>
                 </div>
               ))}
             </div>
@@ -128,7 +130,7 @@ export default function Home() {
             )}
 
             {/* Tabs */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: '1.5rem', background: '#13131a', border: '1px solid #1e1e2e', borderRadius: 10, padding: 4 }}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: '1.5rem', background: COLOR_BG_SUBTLE, border: `1px solid ${COLOR_BORDER}`, borderRadius: 10, padding: 4 }}>
               {([
                 { id: 'owner', label: '🔐 My Vault', desc: 'Manage your inheritance vault' },
                 { id: 'heir', label: '🧬 Claim', desc: 'Claim an inheritance' },
@@ -138,8 +140,8 @@ export default function Home() {
                   onClick={() => setTab(t.id)}
                   style={{
                     flex: 1,
-                    background: tab === t.id ? '#1D9E75' : 'transparent',
-                    color: tab === t.id ? '#fff' : '#64748b',
+                    background: tab === t.id ? ARC_GRADIENT : 'transparent',
+                    color: tab === t.id ? '#fff' : COLOR_TEXT_SECONDARY,
                     border: 'none',
                     borderRadius: 8,
                     padding: '10px',
@@ -170,22 +172,26 @@ export default function Home() {
         )}
 
         {/* Footer */}
-        <div style={{ textAlign: 'center', marginTop: '3rem', fontSize: 12, color: '#334155', lineHeight: 1.8 }}>
-          <div>
-            Contract:{' '}
+        <div style={{ borderTop: `1px solid ${COLOR_BORDER}`, marginTop: '3rem', paddingTop: '1.5rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- small static footer logo, next/image's optimizer isn't needed here */}
+            <img src="/heirloom-icon.png" alt="" width={20} height={20} style={{ display: 'block' }} />
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: COLOR_TEXT_PRIMARY }}>Heirloom</div>
+              <div style={{ fontSize: 11, color: COLOR_TEXT_TERTIARY }}>Built on Arc · Non-custodial · Immutable</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, fontSize: 12 }}>
+            <a href="https://github.com/filipelclima/ArcInherit" target="_blank" rel="noopener noreferrer" style={{ color: COLOR_TEXT_SECONDARY }}>
+              GitHub ↗
+            </a>
             <a
-              href={`https://testnet.arcscan.app/address/${CONTRACT_ADDRESS}`}
+              href={CONTRACT_EXPLORER_URL}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: '#475569', fontFamily: 'monospace' }}
+              style={{ color: COLOR_TEXT_TERTIARY, fontFamily: 'monospace' }}
             >
               {CONTRACT_ADDRESS.slice(0, 10)}...{CONTRACT_ADDRESS.slice(-6)} ↗
-            </a>
-          </div>
-          <div>Built on Arc · Non-custodial · Immutable · Open source</div>
-          <div>
-            <a href="https://github.com/filipelclima/ArcInherit" target="_blank" rel="noopener noreferrer" style={{ color: '#475569' }}>
-              GitHub ↗
             </a>
           </div>
         </div>

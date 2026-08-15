@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { COLOR_BG, COLOR_BG_SUBTLE, COLOR_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY } from '@/lib/theme'
 
 export function Tooltip({ text, children }: { text: string; children: React.ReactNode }) {
   const [show, setShow] = useState(false)
@@ -19,18 +20,19 @@ export function Tooltip({ text, children }: { text: string; children: React.Reac
           left: '50%',
           transform: 'translateX(-50%)',
           marginBottom: 6,
-          background: '#1e293b',
-          border: '1px solid #334155',
+          background: COLOR_BG,
+          border: `1px solid ${COLOR_BORDER}`,
           borderRadius: 8,
           padding: '8px 12px',
           fontSize: 12,
-          color: '#cbd5e1',
+          color: COLOR_TEXT_SECONDARY,
           whiteSpace: 'normal',
           width: 220,
           zIndex: 50,
           lineHeight: 1.5,
           textAlign: 'left',
           pointerEvents: 'none',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
         }}>
           {text}
         </span>
@@ -49,8 +51,9 @@ export function InfoIcon({ tooltip }: { tooltip: string }) {
         width: 16,
         height: 16,
         borderRadius: '50%',
-        background: '#1e293b',
-        color: '#64748b',
+        background: COLOR_BG_SUBTLE,
+        border: `1px solid ${COLOR_BORDER}`,
+        color: COLOR_TEXT_PRIMARY,
         fontSize: 10,
         fontWeight: 700,
         marginLeft: 6,

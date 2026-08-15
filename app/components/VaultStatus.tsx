@@ -1,6 +1,7 @@
 'use client'
 import { useAccount, useReadContract } from 'wagmi'
 import { CONTRACT_ADDRESS, ABI } from '@/lib/contract'
+import { ARC_GRADIENT, COLOR_ACCENT, COLOR_BG, COLOR_BG_SUBTLE, COLOR_BORDER, COLOR_DANGER, COLOR_DANGER_BG, COLOR_DANGER_BORDER, COLOR_SUCCESS, COLOR_SUCCESS_BG, COLOR_SUCCESS_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY, COLOR_TEXT_TERTIARY, COLOR_WARNING, COLOR_WARNING_BG, COLOR_WARNING_BORDER } from '@/lib/theme'
 
 function formatDuration(seconds: bigint): string {
   const days = Number(seconds) / 86400
@@ -59,53 +60,53 @@ export function VaultStatus() {
   const pctElapsed = totalSeconds > 0 ? Math.min(100, (elapsedSeconds / totalSeconds) * 100) : 100
   const daysElapsed = Math.min(Math.floor(elapsedSeconds / 86400), Math.round(totalSeconds / 86400))
   const daysTotal = Math.round(totalSeconds / 86400)
-  const progressColor = pctElapsed >= 100 ? '#ef4444' : pctElapsed >= 70 ? '#EF9F27' : '#1D9E75'
+  const progressColor = pctElapsed >= 100 ? COLOR_DANGER : pctElapsed >= 70 ? COLOR_WARNING : ARC_GRADIENT
 
   return (
     <div style={{ marginBottom: '1.5rem' }}>
       {/* Urgent warning */}
       {canClaim && (
-        <div style={{ background: '#ef444411', border: '1px solid #ef4444', borderRadius: 10, padding: '1rem 1.25rem', marginBottom: '1rem', fontSize: 14, color: '#ef4444', fontWeight: 600 }}>
+        <div style={{ background: COLOR_DANGER_BG, border: `1px solid ${COLOR_DANGER_BORDER}`, borderRadius: 10, padding: '1rem 1.25rem', marginBottom: '1rem', fontSize: 14, color: COLOR_DANGER, fontWeight: 600 }}>
           ⚠️ Your heirs can claim your funds right now. Check in immediately to stop this.
         </div>
       )}
 
       {timeInfo?.urgent && !canClaim && (
-        <div style={{ background: '#EF9F2711', border: '1px solid #EF9F27', borderRadius: 10, padding: '1rem 1.25rem', marginBottom: '1rem', fontSize: 14, color: '#EF9F27', fontWeight: 600 }}>
+        <div style={{ background: COLOR_WARNING_BG, border: `1px solid ${COLOR_WARNING_BORDER}`, borderRadius: 10, padding: '1rem 1.25rem', marginBottom: '1rem', fontSize: 14, color: COLOR_WARNING, fontWeight: 600 }}>
           ⏰ {timeInfo.text}
         </div>
       )}
 
       {/* Vault overview */}
-      <div style={{ background: '#13131a', border: '1px solid #1e1e2e', borderRadius: 12, padding: '1.5rem', marginBottom: '1rem' }}>
+      <div style={{ background: COLOR_BG, border: `1px solid ${COLOR_BORDER}`, borderRadius: 12, padding: '1.5rem', marginBottom: '1rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9' }}>Your Vault</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: COLOR_TEXT_PRIMARY }}>Your Vault</div>
           <div style={{
-            background: canClaim ? '#ef444422' : '#1D9E7522',
-            border: `1px solid ${canClaim ? '#ef4444' : '#1D9E75'}`,
+            background: canClaim ? COLOR_DANGER_BG : COLOR_SUCCESS_BG,
+            border: `1px solid ${canClaim ? COLOR_DANGER_BORDER : COLOR_SUCCESS_BORDER}`,
             borderRadius: 8, padding: '4px 12px', fontSize: 12,
-            color: canClaim ? '#ef4444' : '#1D9E75', fontWeight: 600
+            color: canClaim ? COLOR_DANGER : COLOR_SUCCESS, fontWeight: 600
           }}>
             {canClaim ? '⚠️ Claimable' : '✓ Protected'}
           </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: '1.25rem' }}>
-          <div style={{ background: '#0a0a0f', borderRadius: 8, padding: '12px' }}>
-            <div style={{ fontSize: 11, color: '#475569', marginBottom: 4 }}>Check-in every</div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: '#378ADD' }}>{formatDuration(timelockDuration)}</div>
+          <div style={{ background: COLOR_BG_SUBTLE, border: `1px solid ${COLOR_BORDER}`, borderRadius: 8, padding: '12px' }}>
+            <div style={{ fontSize: 11, color: COLOR_TEXT_TERTIARY, marginBottom: 4 }}>Check-in every</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: COLOR_TEXT_PRIMARY }}>{formatDuration(timelockDuration)}</div>
           </div>
-          <div style={{ background: '#0a0a0f', borderRadius: 8, padding: '12px' }}>
-            <div style={{ fontSize: 11, color: '#475569', marginBottom: 4 }}>Safety window</div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: '#EF9F27' }}>{formatDuration(gracePeriod)}</div>
+          <div style={{ background: COLOR_BG_SUBTLE, border: `1px solid ${COLOR_BORDER}`, borderRadius: 8, padding: '12px' }}>
+            <div style={{ fontSize: 11, color: COLOR_TEXT_TERTIARY, marginBottom: 4 }}>Safety window</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: COLOR_TEXT_PRIMARY }}>{formatDuration(gracePeriod)}</div>
           </div>
-          <div style={{ background: '#0a0a0f', borderRadius: 8, padding: '12px' }}>
-            <div style={{ fontSize: 11, color: '#475569', marginBottom: 4 }}>Last check-in</div>
-            <div style={{ fontSize: 14, fontWeight: 500, color: '#f1f5f9' }}>{lastCheckInDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+          <div style={{ background: COLOR_BG_SUBTLE, border: `1px solid ${COLOR_BORDER}`, borderRadius: 8, padding: '12px' }}>
+            <div style={{ fontSize: 11, color: COLOR_TEXT_TERTIARY, marginBottom: 4 }}>Last check-in</div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: COLOR_TEXT_PRIMARY }}>{lastCheckInDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
           </div>
-          <div style={{ background: '#0a0a0f', borderRadius: 8, padding: '12px' }}>
-            <div style={{ fontSize: 11, color: '#475569', marginBottom: 4 }}>Next check-in deadline</div>
-            <div style={{ fontSize: 14, fontWeight: 500, color: timeInfo?.urgent ? '#EF9F27' : '#f1f5f9' }}>
+          <div style={{ background: COLOR_BG_SUBTLE, border: `1px solid ${COLOR_BORDER}`, borderRadius: 8, padding: '12px' }}>
+            <div style={{ fontSize: 11, color: COLOR_TEXT_TERTIARY, marginBottom: 4 }}>Next check-in deadline</div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: timeInfo?.urgent ? COLOR_WARNING : COLOR_TEXT_PRIMARY }}>
               {nextDeadline.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </div>
           </div>
@@ -113,10 +114,10 @@ export function VaultStatus() {
 
         <div style={{ marginBottom: '1.25rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span style={{ fontSize: 11, color: '#475569' }}>Check-in period used</span>
-            <span style={{ fontSize: 11, color: '#64748b' }}>{daysElapsed} / {daysTotal} days</span>
+            <span style={{ fontSize: 11, color: COLOR_TEXT_TERTIARY }}>Check-in period used</span>
+            <span style={{ fontSize: 11, color: COLOR_TEXT_SECONDARY }}>{daysElapsed} / {daysTotal} days</span>
           </div>
-          <div style={{ background: '#0a0a0f', borderRadius: 999, height: 8, overflow: 'hidden' }}>
+          <div style={{ background: COLOR_BORDER, borderRadius: 999, height: 8, overflow: 'hidden' }}>
             <div
               data-testid="checkin-progress-bar"
               style={{
@@ -131,24 +132,24 @@ export function VaultStatus() {
         </div>
 
         {timeInfo && !timeInfo.urgent && (
-          <div style={{ background: '#1D9E7511', border: '1px solid #1D9E7533', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#1D9E75' }}>
+          <div style={{ background: COLOR_SUCCESS_BG, border: `1px solid ${COLOR_SUCCESS_BORDER}`, borderRadius: 8, padding: '10px 14px', fontSize: 13, color: COLOR_SUCCESS }}>
             ✓ {timeInfo.text}
           </div>
         )}
       </div>
 
       {/* Heirs */}
-      <div style={{ background: '#13131a', border: '1px solid #1e1e2e', borderRadius: 12, padding: '1.25rem' }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: '#94a3b8', marginBottom: 10 }}>
+      <div style={{ background: COLOR_BG, border: `1px solid ${COLOR_BORDER}`, borderRadius: 12, padding: '1.25rem' }}>
+        <div style={{ fontSize: 14, fontWeight: 600, color: COLOR_TEXT_SECONDARY, marginBottom: 10 }}>
           Your heirs ({heirs.length})
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {heirs.map((heir, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0a0a0f', borderRadius: 8, padding: '10px 14px' }}>
-              <span style={{ color: '#94a3b8', fontFamily: 'monospace', fontSize: 12 }}>
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: COLOR_BG_SUBTLE, border: `1px solid ${COLOR_BORDER}`, borderRadius: 8, padding: '10px 14px' }}>
+              <span style={{ color: COLOR_TEXT_SECONDARY, fontFamily: 'monospace', fontSize: 12 }}>
                 {heir.wallet.slice(0, 12)}...{heir.wallet.slice(-8)}
               </span>
-              <span style={{ color: '#A78BFA', fontWeight: 700, fontSize: 14 }}>{heir.percentage}%</span>
+              <span style={{ color: COLOR_ACCENT, fontWeight: 700, fontSize: 14 }}>{heir.percentage}%</span>
             </div>
           ))}
         </div>
