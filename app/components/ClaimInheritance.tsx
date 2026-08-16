@@ -4,9 +4,11 @@ import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadCont
 import { ARC_TESTNET, CONTRACT_ADDRESS, ABI } from '@/lib/contract'
 import { isAddress } from 'viem'
 import { ARC_GRADIENT, COLOR_BG, COLOR_BG_SUBTLE, COLOR_BORDER, COLOR_DANGER, COLOR_DANGER_BG, COLOR_DANGER_BORDER, COLOR_SUCCESS, COLOR_SUCCESS_BG, COLOR_SUCCESS_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY, COLOR_TEXT_TERTIARY, COLOR_WARNING } from '@/lib/theme'
+import { useIsWrongNetwork } from '../hooks/useEnsureArcNetwork'
 
 export function ClaimInheritance() {
   const { address } = useAccount()
+  const isWrongNetwork = useIsWrongNetwork()
   const [ownerAddress, setOwnerAddress] = useState('')
   const [tokenAddress, setTokenAddress] = useState('')
   const [error, setError] = useState('')
@@ -127,7 +129,7 @@ export function ClaimInheritance() {
 
         <button
           onClick={handleClaim}
-          disabled={isPending || isConfirming || !canClaim || !isHeir}
+          disabled={isPending || isConfirming || !canClaim || !isHeir || isWrongNetwork}
           style={{
             background: canClaim && isHeir ? ARC_GRADIENT : COLOR_BG_SUBTLE,
             border: canClaim && isHeir ? 'none' : `1px solid ${COLOR_BORDER}`,

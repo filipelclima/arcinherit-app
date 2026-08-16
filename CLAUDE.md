@@ -21,7 +21,8 @@ dApp de herança onchain na Arc Network. Deixa o dono de uma vault designar herd
 - `lib/contract.ts` — endereço do contrato, ABI (via `parseAbi`), config da Arc Testnet
 - `lib/wagmi.ts` — `createConfig` do wagmi + augmentação do `Register` (necessária para inferência de tipos correta em `useWriteContract`)
 - `lib/theme.ts` — tokens do novo design system claro (ver seção "Redesign visual" abaixo)
-- `app/components/` — `CreateVault`, `Deposit`, `CheckIn`, `ClaimInheritance`, `VaultStatus`, `ConnectWallet`, `HowItWorks`
+- `app/hooks/useEnsureArcNetwork.ts` — enforcement de rede (ver "Enforcement de rede" abaixo)
+- `app/components/` — `CreateVault`, `Deposit`, `CheckIn`, `ClaimInheritance`, `VaultStatus`, `ConnectWallet`, `HowItWorks`, `WrongNetworkBanner`
 
 ## Redesign visual (concluído, feito por partes)
 
@@ -36,6 +37,25 @@ Migração de tema escuro pra um design system claro, inspirado no estilo do [Aq
   - **Botões de seleção/estado ativo** (timelock, safety window, Tabs) usam `ARC_GRADIENT` no estado ativo; inativo vira `COLOR_BG_SUBTLE` + borda `COLOR_BORDER`.
   - **"Estados vazios antes de conectar wallet"** (item do pedido da Parte 2) não tinha nenhuma tela concreta no código pra redesenhar — o app já só mostra o Hero (Parte 1) quando desconectado, nenhum componente (`CreateVault`, `Deposit`, etc.) chega a renderizar nesse estado. Tratado como já coberto pela Parte 1, sem inventar uma tela especulativa sem uso real.
 - `ConnectWallet` tem uma prop opcional `size?: 'md' | 'lg'` (default `'md'`) — usada com `'lg'` só no CTA do Hero, pra ficar maior que a versão do header sem duplicar o componente.
+
+## Enforcement de rede (2026-08-16)
+
+Bug reportado por usuário externo: ao conectar a wallet estando em outra rede (ex.: Arbitrum), o app não forçava a troca pra Arc Testnet — a wallet ficava na rede errada mesmo conectada com sucesso.
+
+- **`app/hooks/useEnsureArcNetwork.ts`** — dois hooks:
+  - `useIsWrongNetwork()`: leitura pura (sem side effect), `isConnected && chainId !== ARC_TESTNET.id`. Segura pra chamar em quantos componentes forem necessários.
+  - `useEnsureArcNetwork()`: dono do `useEffect` que efetivamente chama `switchChain({ chainId: ARC_TESTNET.id })`. Chamado **uma única vez**, em `app/page.tsx` (topo do `Home()`) — não dentro de cada componente individual, senão cada um dispararia seu próprio prompt de troca de rede simultaneamente.
+- **`WrongNetworkBanner.tsx`** — banner persistente ("Wrong network — click to switch to Arc Testnet") renderizado logo abaixo do header quando `isWrongNetwork`; clicável pra re-tentar a troca manualmente (necessário quando o usuário rejeita o prompt automático). Some sozinho assim que a rede correta é detectada.
+- `CheckIn`, `CreateVault`, `Deposit`, `ClaimInheritance` chamam `useIsWrongNetwork()` e adicionam ao `disabled` do botão de escrita principal — sem isso, o botão ficaria clicável (e falharia) enquanto a troca de rede não completa ou é rejeitada.
+- Nenhum fallback manual de `wallet_addEthereumChain` foi implementado — o connector `injected()` do wagmi já faz esse fallback sozinho quando `switchChain` recebe erro `4902`, usando os campos de `ARC_TESTNET` (`lib/contract.ts`) que já tinham `rpcUrls`/`blockExplorers`/`nativeCurrency` corretos. Reimplementar isso na mão seria duplicar lógica que o wagmi já cobre.
+
+### Armadilha nova: `useChainId()` não serve pra detectar rede errada neste projeto
+
+`useChainId()` **parece** o hook certo pra isso, mas é inútil aqui: o `createConfig` do wagmi tem `syncConnectedChain: true` por padrão, que só copia o chainId da conexão pro estado global (`state.chainId`, o que `useChainId()` lê) **se esse chainId também estiver na lista `chains` do `createConfig`**. Como `lib/wagmi.ts` só configura `chains: [ARC_TESTNET]`, qualquer rede "errada" nunca é considerada configurada — `useChainId()` fica **travado eternamente** em `ARC_TESTNET.id`, mesmo com a wallet ativa em Arbitrum. Diferente do pitfall já documentado de `useAccount().chain` (que fica `undefined`), aqui o hook retorna um valor *plausível e errado*, o que é mais perigoso de passar despercebido.
+
+**A fonte confiável é `useAccount().chainId`** (o número puro, não o objeto `chain`) — ele é atualizado sem nenhum gate de "está configurado", via qualquer evento `connect`/`chainChanged` do connector (ver `@wagmi/core`'s `getAccount()`/`change()` internals). É o que `useIsWrongNetwork()` usa.
+
+Nos testes, isso significa mockar `chainId` dentro do retorno de `useAccount()`, nunca mockar `useChainId()` separadamente pra esse propósito — um mock de `useChainId()` sempre "funciona" no teste (porque o mock não reproduz o gate real do wagmi), escondendo esse bug exato. Foi assim que a primeira versão desta feature passou nos testes unitários mas falhou ao verificar de verdade no browser.
 
 ## Armadilhas conhecidas (não repetir)
 

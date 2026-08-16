@@ -44,4 +44,23 @@ describe('CheckIn', () => {
     const { container } = render(<CheckIn />)
     expect(container).toBeEmptyDOMElement()
   })
+
+  it('disables the check-in button while the connected wallet is on the wrong network', () => {
+    const writeContract = vi.fn()
+    const address = '0x1111111111111111111111111111111111111111'
+
+    // 42161 = Arbitrum, not in this app's configured chains (see useEnsureArcNetwork.ts
+    // for why useAccount().chainId, not useChainId(), is what must be mocked here).
+    mockUseAccount.mockReturnValue({ address, isConnected: true, chainId: 42161 } as any)
+    mockUseReadContract.mockReturnValue({ data: [0n, 0n, 0n, true, []] } as any)
+    mockUseWriteContract.mockReturnValue({ writeContract, data: undefined, isPending: false } as any)
+    mockUseWaitForTransactionReceipt.mockReturnValue({ isLoading: false, isSuccess: false } as any)
+
+    render(<CheckIn />)
+    const button = screen.getByText('Check in — I am alive')
+    expect(button).toBeDisabled()
+
+    fireEvent.click(button)
+    expect(writeContract).not.toHaveBeenCalled()
+  })
 })

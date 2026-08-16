@@ -88,4 +88,39 @@ describe('Deposit', () => {
     expect(writeContract.mock.calls[0][0]).toMatchObject({ account: address })
     expect(writeContract.mock.calls[0][0].chain).toBeDefined()
   })
+
+  it('disables both approve and deposit buttons while the connected wallet is on the wrong network', () => {
+    const writeContract = vi.fn()
+    const address = '0x1111111111111111111111111111111111111111'
+
+    mockUseAccount.mockReturnValue({ address, isConnected: true, chainId: 42161 } as any) // Arbitrum, not Arc Testnet
+    mockUseWriteContract.mockReturnValue({ writeContract, data: undefined, isPending: false } as any)
+    mockUseWaitForTransactionReceipt.mockReturnValue({ isLoading: false, isSuccess: false } as any)
+
+    mockUseReadContract.mockImplementation(((params: any) => {
+      switch (params.functionName) {
+        case 'getVault':
+          return { data: [0n, 0n, 0n, true, []] }
+        case 'decimals':
+          return { data: 6 }
+        case 'symbol':
+          return { data: 'USDC' }
+        case 'balanceOf':
+          return { data: 1000n }
+        case 'allowance':
+          return { data: 0n, refetch: vi.fn() }
+        default:
+          return { data: undefined }
+      }
+    }) as any)
+
+    render(<Deposit />)
+    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '10' } })
+
+    expect(screen.getByText('1. Approve')).toBeDisabled()
+    expect(screen.getByText('2. Deposit')).toBeDisabled()
+
+    fireEvent.click(screen.getByText('1. Approve'))
+    expect(writeContract).not.toHaveBeenCalled()
+  })
 })

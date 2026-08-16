@@ -4,11 +4,13 @@ import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadCont
 import { ARC_TESTNET, CONTRACT_ADDRESS, ABI } from '@/lib/contract'
 import { InfoIcon } from './Tooltip'
 import { ARC_GRADIENT, COLOR_ACCENT_TINT, COLOR_BG, COLOR_BG_SUBTLE, COLOR_BORDER, COLOR_DANGER, COLOR_DANGER_BG, COLOR_DANGER_BORDER, COLOR_SUCCESS, COLOR_SUCCESS_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY, COLOR_TEXT_TERTIARY } from '@/lib/theme'
+import { useIsWrongNetwork } from '../hooks/useEnsureArcNetwork'
 
 interface Heir { wallet: string; percentage: number }
 
 export function CreateVault({ onCreated }: { onCreated: () => void }) {
   const { address } = useAccount()
+  const isWrongNetwork = useIsWrongNetwork()
   const [timelockDays, setTimelockDays] = useState(365)
   const [graceDays, setGraceDays] = useState(30)
   const [heirs, setHeirs] = useState<Heir[]>([{ wallet: '', percentage: 100 }])
@@ -215,7 +217,7 @@ export function CreateVault({ onCreated }: { onCreated: () => void }) {
 
       <button
         onClick={handleCreate}
-        disabled={isPending || isConfirming || !address}
+        disabled={isPending || isConfirming || !address || isWrongNetwork}
         style={{ background: ARC_GRADIENT, border: 'none', color: '#fff', width: '100%', padding: '14px', fontWeight: 700, fontSize: 15, borderRadius: 10 }}
       >
         {isPending ? 'Confirm in your wallet...' : isConfirming ? 'Creating vault...' : 'Create my inheritance vault →'}

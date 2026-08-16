@@ -3,6 +3,8 @@ import { useState } from 'react'
 import { useAccount, useReadContract } from 'wagmi'
 import { ConnectWallet } from './components/ConnectWallet'
 import { RebrandBanner } from './components/RebrandBanner'
+import { WrongNetworkBanner } from './components/WrongNetworkBanner'
+import { useEnsureArcNetwork } from './hooks/useEnsureArcNetwork'
 import { HowItWorks } from './components/HowItWorks'
 import { VaultStatus } from './components/VaultStatus'
 import { CreateVault } from './components/CreateVault'
@@ -21,6 +23,10 @@ export default function Home() {
   const [tab, setTab] = useState<Tab>('owner')
   const [refreshKey, setRefreshKey] = useState(0)
   const [showHowItWorks, setShowHowItWorks] = useState(false)
+  // Called once here (not inside individual components) so a chain mismatch
+  // only ever triggers a single wallet_switchEthereumChain prompt — see
+  // app/hooks/useEnsureArcNetwork.ts.
+  const { isWrongNetwork, switchToArc, isSwitching } = useEnsureArcNetwork()
 
   const { data: vault } = useReadContract({
     address: CONTRACT_ADDRESS,
@@ -35,6 +41,7 @@ export default function Home() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <RebrandBanner />
+      <WrongNetworkBanner isWrongNetwork={isWrongNetwork} isSwitching={isSwitching} onSwitch={switchToArc} />
 
       {/* Header */}
       <div style={{ background: COLOR_BG, borderBottom: `1px solid ${COLOR_BORDER}`, padding: '1rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>

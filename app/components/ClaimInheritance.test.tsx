@@ -56,4 +56,39 @@ describe('ClaimInheritance', () => {
     expect(writeContract.mock.calls[0][0]).toMatchObject({ account: HEIR_ADDRESS, functionName: 'claimInheritance' })
     expect(writeContract.mock.calls[0][0].chain).toBeDefined()
   })
+
+  it('disables the claim button while the connected wallet is on the wrong network, even when otherwise claimable', () => {
+    const writeContract = vi.fn()
+
+    mockUseAccount.mockReturnValue({ address: HEIR_ADDRESS, isConnected: true, chainId: 42161 } as any) // Arbitrum, not Arc Testnet
+    mockUseWriteContract.mockReturnValue({ writeContract, data: undefined, isPending: false } as any)
+    mockUseWaitForTransactionReceipt.mockReturnValue({ isLoading: false, isSuccess: false } as any)
+
+    mockUseReadContract.mockImplementation(((params: any) => {
+      switch (params.functionName) {
+        case 'canClaim':
+          return { data: true }
+        case 'timeUntilClaim':
+          return { data: 0n }
+        case 'getVault':
+          return { data: [0n, 0n, 0n, true, [{ wallet: HEIR_ADDRESS, percentage: 100 }]] }
+        default:
+          return { data: undefined }
+      }
+    }) as any)
+
+    render(<ClaimInheritance />)
+
+    fireEvent.change(screen.getByPlaceholderText('0x... the person who created the vault'), {
+      target: { value: OWNER_ADDRESS },
+    })
+    fireEvent.change(screen.getByPlaceholderText('0x... token contract address'), {
+      target: { value: TOKEN_ADDRESS },
+    })
+    const button = screen.getByText('Claim my inheritance')
+    expect(button).toBeDisabled()
+
+    fireEvent.click(button)
+    expect(writeContract).not.toHaveBeenCalled()
+  })
 })

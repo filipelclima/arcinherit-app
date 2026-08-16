@@ -4,9 +4,11 @@ import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadCont
 import { ARC_TESTNET, CONTRACT_ADDRESS, ABI, USDC_ADDRESS, ERC20_ABI } from '@/lib/contract'
 import { parseUnits, formatUnits } from 'viem'
 import { ARC_GRADIENT, COLOR_ACCENT, COLOR_BG, COLOR_BG_SUBTLE, COLOR_BORDER, COLOR_DANGER, COLOR_DANGER_BG, COLOR_DANGER_BORDER, COLOR_SUCCESS, COLOR_SUCCESS_BG, COLOR_SUCCESS_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY, COLOR_TEXT_TERTIARY } from '@/lib/theme'
+import { useIsWrongNetwork } from '../hooks/useEnsureArcNetwork'
 
 export function Deposit() {
   const { address } = useAccount()
+  const isWrongNetwork = useIsWrongNetwork()
   const [amount, setAmount] = useState('')
   const [tokenAddress, setTokenAddress] = useState<string>(USDC_ADDRESS)
   const [error, setError] = useState('')
@@ -137,14 +139,14 @@ export function Deposit() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <button
           onClick={handleApprove}
-          disabled={isPending || isConfirming || hasAllowance}
+          disabled={isPending || isConfirming || hasAllowance || isWrongNetwork}
           style={{ background: hasAllowance ? COLOR_BG_SUBTLE : ARC_GRADIENT, border: hasAllowance ? `1px solid ${COLOR_BORDER}` : 'none', color: hasAllowance ? COLOR_TEXT_TERTIARY : '#fff', padding: '12px', fontWeight: 600, borderRadius: 8 }}
         >
           {hasAllowance ? 'Approved' : isPending ? 'Confirm...' : '1. Approve'}
         </button>
         <button
           onClick={handleDeposit}
-          disabled={isPending || isConfirming || !hasAllowance}
+          disabled={isPending || isConfirming || !hasAllowance || isWrongNetwork}
           style={{ background: !hasAllowance ? COLOR_BG_SUBTLE : ARC_GRADIENT, border: !hasAllowance ? `1px solid ${COLOR_BORDER}` : 'none', color: !hasAllowance ? COLOR_TEXT_TERTIARY : '#fff', padding: '12px', fontWeight: 600, borderRadius: 8 }}
         >
           {isPending ? 'Confirm...' : isConfirming ? 'Depositing...' : '2. Deposit'}

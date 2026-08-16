@@ -71,4 +71,25 @@ describe('CreateVault', () => {
     expect(screen.getByText('Set up your inheritance vault')).toBeInTheDocument()
     expect(screen.queryByText('Vault created!')).not.toBeInTheDocument()
   })
+
+  it('disables vault creation while the connected wallet is on the wrong network', () => {
+    const writeContract = vi.fn()
+    const address = '0x1111111111111111111111111111111111111111'
+
+    mockUseAccount.mockReturnValue({ address, isConnected: true, chainId: 42161 } as any) // Arbitrum, not Arc Testnet
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+    mockUseWriteContract.mockReturnValue({ writeContract, data: undefined, isPending: false } as any)
+    mockUseWaitForTransactionReceipt.mockReturnValue({ isLoading: false, isSuccess: false } as any)
+
+    render(<CreateVault onCreated={vi.fn()} />)
+
+    fireEvent.change(screen.getByPlaceholderText('Heir 1 — wallet address (0x...)'), {
+      target: { value: '0x2222222222222222222222222222222222222222' },
+    })
+    const button = screen.getByText('Create my inheritance vault →')
+    expect(button).toBeDisabled()
+
+    fireEvent.click(button)
+    expect(writeContract).not.toHaveBeenCalled()
+  })
 })

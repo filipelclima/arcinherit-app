@@ -2,9 +2,11 @@
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
 import { ARC_TESTNET, CONTRACT_ADDRESS, ABI } from '@/lib/contract'
 import { ARC_GRADIENT, COLOR_BG, COLOR_BORDER, COLOR_SUCCESS, COLOR_SUCCESS_BG, COLOR_SUCCESS_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY } from '@/lib/theme'
+import { useIsWrongNetwork } from '../hooks/useEnsureArcNetwork'
 
 export function CheckIn() {
   const { address } = useAccount()
+  const isWrongNetwork = useIsWrongNetwork()
   const { writeContract, data: hash, isPending } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
 
@@ -34,7 +36,7 @@ export function CheckIn() {
           if (!address) return
           writeContract({ address: CONTRACT_ADDRESS, abi: ABI, functionName: 'checkIn', account: address, chain: ARC_TESTNET })
         }}
-        disabled={isPending || isConfirming}
+        disabled={isPending || isConfirming || isWrongNetwork}
         style={{ background: ARC_GRADIENT, border: 'none', color: '#fff', width: '100%', padding: '14px', fontWeight: 700, fontSize: 15, borderRadius: 10 }}
       >
         {isPending ? 'Confirm in your wallet...' : isConfirming ? 'Confirming...' : 'Check in — I am alive'}
