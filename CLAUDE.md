@@ -14,6 +14,7 @@ dApp de herança onchain na Arc Network. Deixa o dono de uma vault designar herd
 - wagmi `2.19.0` (fixado exato — ver "Armadilhas conhecidas" abaixo)
 - viem `^2.17.0`
 - @tanstack/react-query `^5.59.0`
+- jsPDF `4.2.1` (fixado exato — geração de PDF 100% client-side, ver "PDF de instruções de herança" abaixo)
 - TypeScript (`strict: false`, `target: ES2020`)
 
 ## Estrutura
@@ -21,6 +22,8 @@ dApp de herança onchain na Arc Network. Deixa o dono de uma vault designar herd
 - `lib/contract.ts` — endereço do contrato, ABI (via `parseAbi`), config da Arc Testnet
 - `lib/wagmi.ts` — `createConfig` do wagmi + augmentação do `Register` (necessária para inferência de tipos correta em `useWriteContract`)
 - `lib/theme.ts` — tokens do novo design system claro (ver seção "Redesign visual" abaixo)
+- `lib/duration.ts` — `formatDuration(seconds: bigint)`, compartilhado entre `VaultStatus.tsx` (UI) e `lib/generateInheritancePdf.ts` (PDF), pra não duplicar a lógica de arredondamento
+- `lib/generateInheritancePdf.ts` — geração do PDF de instruções de herança (ver "PDF de instruções de herança" abaixo)
 - `app/hooks/useEnsureArcNetwork.ts` — enforcement de rede (ver "Enforcement de rede" abaixo)
 - `app/components/` — `CreateVault`, `Deposit`, `CheckIn`, `ClaimInheritance`, `VaultStatus`, `ConnectWallet`, `HowItWorks`, `WrongNetworkBanner`
 
@@ -56,6 +59,21 @@ Bug reportado por usuário externo: ao conectar a wallet estando em outra rede (
 **A fonte confiável é `useAccount().chainId`** (o número puro, não o objeto `chain`) — ele é atualizado sem nenhum gate de "está configurado", via qualquer evento `connect`/`chainChanged` do connector (ver `@wagmi/core`'s `getAccount()`/`change()` internals). É o que `useIsWrongNetwork()` usa.
 
 Nos testes, isso significa mockar `chainId` dentro do retorno de `useAccount()`, nunca mockar `useChainId()` separadamente pra esse propósito — um mock de `useChainId()` sempre "funciona" no teste (porque o mock não reproduz o gate real do wagmi), escondendo esse bug exato. Foi assim que a primeira versão desta feature passou nos testes unitários mas falhou ao verificar de verdade no browser.
+
+## PDF de instruções de herança (2026-08-17)
+
+Problema de UX identificado por testadores: herdeiros não têm como descobrir que existe um vault esperando por eles nem como reivindicá-lo. Solução: o dono do vault gera, com antecedência, um PDF com instruções (mesmo princípio de um testamento/backup de seed phrase), pra guardar ou entregar à família.
+
+- **`lib/generateInheritancePdf.ts`** — monta o PDF inteiramente no navegador via jsPDF (`unit: 'pt', format: 'letter'`), preenchido com os dados reais já carregados na tela (endereço do dono, heirs com wallet+percentual, `timelockDuration`/`gracePeriod` em segundos vindos direto do contrato). **Nunca passa por servidor próprio** — mantém a filosofia non-custodial do projeto. Nome do arquivo fixo em `INHERITANCE_PDF_FILENAME` (`heirloom-inheritance-instructions.pdf`).
+  - `jsPDF` é importado via **`await import('jspdf')` dinâmico dentro da função**, não `import` estático no topo do arquivo — a lib pesa ~130KB e só é usada por quem clica no botão (dono do vault, uma ação pontual), então carregar estático infla o bundle inicial de todo mundo à toa. Confirmado via `npm run build`: bundle da rota `/` caiu de 180KB → 52KB depois da troca pro import dinâmico.
+  - Logo (`/heirloom-icon.png`) é embutido via `fetch` + `FileReader.readAsDataURL` + `doc.addImage`, com fallback silencioso (`try/catch` retornando `null`) se falhar — o logo é só um nice-to-have, o documento tem que sair completo mesmo sem ele (ex.: se o `fetch` falhar em algum ambiente sem essa rota disponível).
+  - Texto do documento (todas as 5 seções) é fixo, copiado literalmente do texto fornecido no pedido — só os placeholders (`[endereço do dono]`, `[percentual]`, `[período]`, `[dias]`) são substituídos por dados reais. **Não reescrever esse texto livremente** — é um documento legal/informativo pra terceiros (herdeiros), não copy de produto.
+- **Botão** ("Download instructions for your heirs") fica em `VaultStatus.tsx`, logo abaixo do card "Your heirs" — só renderiza pro dono já conectado com vault ativo (mesma condição que já gate toda a tela). Estilo secundário (`COLOR_BG` + borda, não `ARC_GRADIENT`) de propósito: não é uma transação onchain como os outros CTAs da tela, é uma ação local/utilitária.
+- **`Check-in period`** no PDF usa `formatDuration()` (mesmo texto arredondado da UI, ex. "1 year"); **`Safety window`** no PDF usa dias brutos (`Math.round(Number(gracePeriod) / 86400)`) — são dois formatos diferentes de propósito, seguindo exatamente o texto pedido ("every [período]" vs "[dias] days").
+
+### Nota de verificação: `useReadContract` não passa pela wallet injetada
+
+Ao testar esse fix no browser com uma wallet EIP-1193 falsa (técnica já usada neste projeto pra simular conexão), descobri na prática que **leituras (`useReadContract`) não passam pelo `eth_call` da wallet conectada** — elas vão direto pro `transport` configurado em `createConfig` (`lib/wagmi.ts`, `http()` apontando pra `rpc.testnet.arc.network`). Só escritas (`useWriteContract`) passam pelo provider injetado. Pra simular dados de vault reais no browser (não só em testes mockados), é preciso interceptar `window.fetch` pras chamadas JSON-RPC pro RPC HTTP, não só mockar `provider.request` do wallet fake. Isso não é um bug do projeto, só uma pegadinha de metodologia de teste manual — documentando aqui pra não redescobrir isso do zero da próxima vez.
 
 ## Armadilhas conhecidas (não repetir)
 

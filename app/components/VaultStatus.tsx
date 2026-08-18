@@ -1,13 +1,19 @@
 'use client'
+import { useState } from 'react'
 import { useAccount, useReadContract } from 'wagmi'
 import { CONTRACT_ADDRESS, ABI } from '@/lib/contract'
+import { formatDuration } from '@/lib/duration'
+import { generateInheritancePdf } from '@/lib/generateInheritancePdf'
 import { ARC_GRADIENT, COLOR_ACCENT, COLOR_BG, COLOR_BG_SUBTLE, COLOR_BORDER, COLOR_DANGER, COLOR_DANGER_BG, COLOR_DANGER_BORDER, COLOR_SUCCESS, COLOR_SUCCESS_BG, COLOR_SUCCESS_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY, COLOR_TEXT_TERTIARY, COLOR_WARNING, COLOR_WARNING_BG, COLOR_WARNING_BORDER } from '@/lib/theme'
 
-function formatDuration(seconds: bigint): string {
-  const days = Number(seconds) / 86400
-  if (days >= 365) return `${Math.round(days / 365)} year${Math.round(days / 365) > 1 ? 's' : ''}`
-  if (days >= 30) return `${Math.round(days / 30)} month${Math.round(days / 30) > 1 ? 's' : ''}`
-  return `${Math.round(days)} days`
+function DownloadIcon() {
+  return (
+    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={COLOR_TEXT_PRIMARY} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="M7 10l5 5 5-5" />
+      <path d="M12 15V3" />
+    </svg>
+  )
 }
 
 function formatTimeLeft(seconds: bigint): { text: string; urgent: boolean } {
@@ -23,6 +29,8 @@ function formatTimeLeft(seconds: bigint): { text: string; urgent: boolean } {
 
 export function VaultStatus() {
   const { address } = useAccount()
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
+  const [pdfError, setPdfError] = useState('')
 
   const { data: vault, isLoading } = useReadContract({
     address: CONTRACT_ADDRESS,
@@ -61,6 +69,23 @@ export function VaultStatus() {
   const daysElapsed = Math.min(Math.floor(elapsedSeconds / 86400), Math.round(totalSeconds / 86400))
   const daysTotal = Math.round(totalSeconds / 86400)
   const progressColor = pctElapsed >= 100 ? COLOR_DANGER : pctElapsed >= 70 ? COLOR_WARNING : ARC_GRADIENT
+
+  async function handleDownloadInstructions() {
+    setPdfError('')
+    setIsGeneratingPdf(true)
+    try {
+      await generateInheritancePdf({
+        ownerAddress: address as string,
+        heirs: heirs.map(h => ({ wallet: h.wallet, percentage: h.percentage })),
+        timelockDuration,
+        gracePeriod,
+      })
+    } catch {
+      setPdfError('Could not generate the PDF. Please try again.')
+    } finally {
+      setIsGeneratingPdf(false)
+    }
+  }
 
   return (
     <div style={{ marginBottom: '1.5rem' }}>
@@ -154,6 +179,25 @@ export function VaultStatus() {
           ))}
         </div>
       </div>
+
+      {/* Inheritance instructions PDF */}
+      <button
+        data-testid="download-instructions-button"
+        onClick={handleDownloadInstructions}
+        disabled={isGeneratingPdf}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          width: '100%', marginTop: '1rem',
+          background: COLOR_BG, border: `1px solid ${COLOR_BORDER}`,
+          color: COLOR_TEXT_PRIMARY, padding: '12px', fontWeight: 600, fontSize: 14, borderRadius: 8,
+        }}
+      >
+        <DownloadIcon />
+        {isGeneratingPdf ? 'Generating PDF…' : 'Download instructions for your heirs'}
+      </button>
+      {pdfError && (
+        <div style={{ marginTop: 8, fontSize: 12, color: COLOR_DANGER, textAlign: 'center' }}>{pdfError}</div>
+      )}
     </div>
   )
 }
