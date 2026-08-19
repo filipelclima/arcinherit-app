@@ -5,7 +5,13 @@ export const CONTRACT_ADDRESS = '0xdb7875DBfDe3A5C4763C11eF15f972C26E3D8818' as 
 export const ARC_TESTNET = {
   id: 5042002,
   name: 'Arc Testnet',
-  nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 6 },
+  // Arc's native gas currency (18 decimals) — distinct from the ERC-20 USDC interface
+  // at USDC_ADDRESS below (6 decimals). Getting this wrong doesn't affect any deposit/
+  // balance/claim math in the app (all of that goes through the ERC-20 interface, see
+  // CLAUDE.md "Auditoria: interface nativa vs ERC-20"), but it does get passed verbatim
+  // to wallet_addEthereumChain when a wallet auto-adds Arc Testnet (useEnsureArcNetwork.ts),
+  // so a wrong value here shows the wallet's own native gas balance off by 10^12.
+  nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
   rpcUrls: {
     default: { http: ['https://rpc.testnet.arc.network'] },
   },
