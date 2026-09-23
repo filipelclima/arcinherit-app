@@ -1,0 +1,78 @@
+/* Interaction polish shared by the functional screens (create vault, vault status, deposit, check-in,
+   claim). Colors and spacing stay in the components (theme tokens); this file only owns motion.
+
+   Rules of the road, enforced by ui.css.test.ts:
+   - Every `animation` lives in the `prefers-reduced-motion: no-preference` block at the bottom.
+   - Nothing here moves layout: hover only adds a shadow, press only scales/darkens the element
+     itself (transform / filter), entrance only fades and nudges 6px (opacity / transform).
+   - Hover effects are gated behind `(hover: hover)` so they never get "stuck" after a tap on touch. */
+
+/* ---- Cards: shadow fades in on hover (never a translate, so nothing shifts) ------------------- */
+
+.ui-card {
+  transition: box-shadow 0.2s ease;
+}
+
+.ui-card-sm {
+  transition: box-shadow 0.2s ease;
+}
+
+@media (hover: hover) {
+  .ui-card:hover {
+    box-shadow: 0 4px 16px rgba(10, 10, 10, 0.06);
+  }
+
+  .ui-card-sm:hover {
+    box-shadow: 0 2px 8px rgba(10, 10, 10, 0.06);
+  }
+}
+
+/* ---- Buttons: tactile press on top of the global hover (opacity .85) --------------------------
+   Applied to every action button. Disabled buttons are excluded, so a greyed-out "Deposit" doesn't
+   pretend to be clickable. */
+
+.ui-press {
+  transition: opacity 0.2s ease, transform 0.12s ease, filter 0.12s ease;
+}
+
+.ui-press:active:not(:disabled) {
+  transform: scale(0.98);
+  filter: brightness(0.9);
+}
+
+.ui-press:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Same focus ring as .ui-press, for interactive elements that aren't a "press" button — e.g. the
+   Tooltip trigger, which only discloses text on focus/hover and has no press/active state of its own. */
+.ui-focus-ring:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---- Entrance: cards, banners and messages fade in and settle 6px into place -------------------
+   Runs whenever the element mounts, which is exactly the moment content "changes": switching tabs,
+   a vault appearing after creation, a success/error message showing up after an action. */
+
+@keyframes ui-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ---- Skeleton loading: neutral gray blocks standing in for on-chain data while it loads --------
+   Pulse (opacity) only — never a moving shimmer/background-position sweep. That keeps every
+   keyframe in this file to opacity/transform (cheap on weak devices, enforced below) and needs no
+   extra repaint per frame. Color is the component's job (COLOR_BORDER via the Skeleton primitive in
+   ui.tsx); this file only owns the motion. */
+
+@keyframes ui-skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ui-enter { animation: ui-enter 0.28s ease-out; }
+  .ui-skeleton { animation: ui-skeleton-pulse 1.6s ease-in-out infinite; }
+}

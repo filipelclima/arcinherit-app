@@ -3,14 +3,17 @@ import { useState } from 'react'
 import { useAccount, useReadContract } from 'wagmi'
 import { ConnectWallet } from './components/ConnectWallet'
 import { RebrandBanner } from './components/RebrandBanner'
+import { Hero } from './components/Hero'
 import { WrongNetworkBanner } from './components/WrongNetworkBanner'
 import { useEnsureArcNetwork } from './hooks/useEnsureArcNetwork'
 import { HowItWorks } from './components/HowItWorks'
-import { VaultStatus } from './components/VaultStatus'
+import { VaultStatus, VaultStatusSkeleton } from './components/VaultStatus'
 import { CreateVault } from './components/CreateVault'
 import { CheckIn } from './components/CheckIn'
 import { Deposit } from './components/Deposit'
 import { ClaimInheritance } from './components/ClaimInheritance'
+import { LockIcon, UsersIcon } from './components/icons'
+import './components/ui.css'
 import { CONTRACT_ADDRESS, ABI } from '@/lib/contract'
 import { ARC_GRADIENT, COLOR_BG, COLOR_BG_SUBTLE, COLOR_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY, COLOR_TEXT_TERTIARY } from '@/lib/theme'
 
@@ -28,7 +31,7 @@ export default function Home() {
   // app/hooks/useEnsureArcNetwork.ts.
   const { isWrongNetwork, switchToArc, isSwitching } = useEnsureArcNetwork()
 
-  const { data: vault } = useReadContract({
+  const { data: vault, isLoading: isLoadingVault } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: ABI,
     functionName: 'getVault',
@@ -57,6 +60,7 @@ export default function Home() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button
+            className="ui-press"
             onClick={() => setShowHowItWorks(!showHowItWorks)}
             style={{ background: 'transparent', border: `1px solid ${COLOR_BORDER}`, color: COLOR_TEXT_SECONDARY, padding: '6px 14px', fontSize: 13, whiteSpace: 'nowrap', borderRadius: 8 }}
           >
@@ -66,30 +70,7 @@ export default function Home() {
         </div>
       </div>
 
-      {!isConnected && (
-        /* Hero */
-        <div style={{ background: COLOR_BG, borderBottom: `1px solid ${COLOR_BORDER}` }}>
-          <div style={{ maxWidth: 700, margin: '0 auto', padding: '4rem 1rem', textAlign: 'center' }}>
-            <div style={{
-              display: 'inline-block', background: ARC_GRADIENT, color: '#fff', fontSize: 13, fontWeight: 600,
-              borderRadius: 9999, padding: '6px 16px', marginBottom: 20, whiteSpace: 'nowrap',
-            }}>
-              Built on Arc
-            </div>
-            <div style={{ fontSize: 46, fontWeight: 800, color: COLOR_TEXT_PRIMARY, marginBottom: 16, letterSpacing: '-0.03em', lineHeight: 1.15 }}>
-              Your crypto.<br />
-              <span style={{ backgroundImage: ARC_GRADIENT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Your heirs.</span>
-            </div>
-            <div style={{ fontSize: 16, color: COLOR_TEXT_SECONDARY, marginBottom: 12, maxWidth: 500, margin: '0 auto 12px', lineHeight: 1.7 }}>
-              Set up an onchain inheritance vault in minutes. If you stop checking in, your designated heirs can claim their share automatically — no lawyers, no paperwork, no middlemen.
-            </div>
-            <div style={{ fontSize: 13, color: COLOR_TEXT_TERTIARY, marginBottom: 32 }}>
-              Built on Arc · Non-custodial · Immutable · Less than $0.01 per transaction
-            </div>
-            <ConnectWallet size="lg" />
-          </div>
-        </div>
-      )}
+      {!isConnected && <Hero />}
 
       <div style={{ maxWidth: 700, margin: '0 auto', padding: '2rem 1rem' }}>
 
@@ -142,39 +123,50 @@ export default function Home() {
             {/* Tabs */}
             <div style={{ display: 'flex', gap: 8, marginBottom: '1.5rem', background: COLOR_BG_SUBTLE, border: `1px solid ${COLOR_BORDER}`, borderRadius: 10, padding: 4 }}>
               {([
-                { id: 'owner', label: '🔐 My Vault', desc: 'Manage your inheritance vault' },
-                { id: 'heir', label: '🧬 Claim', desc: 'Claim an inheritance' },
-              ] as { id: Tab; label: string; desc: string }[]).map(t => (
+                { id: 'owner', label: 'My Vault', Icon: LockIcon },
+                { id: 'heir', label: 'Claim', Icon: UsersIcon },
+              ] as { id: Tab; label: string; Icon: typeof LockIcon }[]).map(({ id, label, Icon }) => (
                 <button
-                  key={t.id}
-                  onClick={() => setTab(t.id)}
+                  key={id}
+                  className="ui-press"
+                  onClick={() => setTab(id)}
                   style={{
                     flex: 1,
-                    background: tab === t.id ? ARC_GRADIENT : 'transparent',
-                    color: tab === t.id ? '#fff' : COLOR_TEXT_SECONDARY,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    background: tab === id ? ARC_GRADIENT : 'transparent',
+                    color: tab === id ? '#fff' : COLOR_TEXT_SECONDARY,
                     border: 'none',
                     borderRadius: 8,
                     padding: '10px',
-                    fontWeight: tab === t.id ? 600 : 400,
+                    fontWeight: tab === id ? 600 : 400,
                     fontSize: 14,
                   }}
                 >
-                  {t.label}
+                  <Icon size={16} color={tab === id ? '#fff' : COLOR_TEXT_SECONDARY} />
+                  {label}
                 </button>
               ))}
             </div>
 
             {tab === 'owner' && (
-              <>
-                <VaultStatus key={refreshKey} />
-                {!hasVault && <CreateVault onCreated={() => setRefreshKey(k => k + 1)} />}
-                {hasVault && (
-                  <>
-                    <CheckIn />
-                    <Deposit />
-                  </>
-                )}
-              </>
+              // Don't decide between "you have a vault" (VaultStatus) and "you don't" (CreateVault)
+              // until we actually know — otherwise CreateVault's form flashes for existing-vault
+              // owners for the instant getVault takes to resolve. One neutral skeleton stands in for
+              // either outcome until then.
+              isLoadingVault ? (
+                <VaultStatusSkeleton />
+              ) : (
+                <>
+                  <VaultStatus key={refreshKey} />
+                  {!hasVault && <CreateVault onCreated={() => setRefreshKey(k => k + 1)} />}
+                  {hasVault && (
+                    <>
+                      <CheckIn />
+                      <Deposit />
+                    </>
+                  )}
+                </>
+              )
             )}
 
             {tab === 'heir' && <ClaimInheritance />}

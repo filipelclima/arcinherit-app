@@ -35,6 +35,15 @@ describe('Home header', () => {
     expect(header).toHaveStyle({ flexWrap: 'wrap' })
   })
 
+  it('gives the "How it works" toggle a visible keyboard focus ring', () => {
+    mockUseAccount.mockReturnValue({ address: undefined, isConnected: false } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+
+    render(<Home />)
+
+    expect(screen.getByRole('button', { name: 'How it works' })).toHaveClass('ui-press')
+  })
+
   it('shows the Heirloom logo image next to the wordmark in the header', () => {
     mockUseAccount.mockReturnValue({ address: undefined, isConnected: false } as any)
     mockUseReadContract.mockReturnValue({ data: undefined } as any)
@@ -118,5 +127,68 @@ describe('Wrong network handling (connect-time chain enforcement)', () => {
 
     expect(screen.queryByTestId('wrong-network-banner')).not.toBeInTheDocument()
     expect(switchChain).not.toHaveBeenCalled()
+  })
+})
+
+describe('Connected screens: tabs and content transitions', () => {
+  function renderConnected() {
+    mockUseAccount.mockReturnValue({ address: '0x1111111111111111111111111111111111111111', isConnected: true, chainId: ARC_TESTNET.id } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+    mockUseSwitchChain.mockReturnValue({ switchChain: vi.fn(), status: 'idle' } as any)
+    return render(<Home />)
+  }
+
+  it('labels the tabs with SVG icons and plain text, not emoji, and gives them press feedback', () => {
+    renderConnected()
+
+    for (const name of ['My Vault', 'Claim']) {
+      const tab = screen.getByRole('button', { name })
+      expect(tab.querySelector('svg')).not.toBeNull()
+      expect(tab).toHaveClass('ui-press')
+    }
+    expect(document.body.textContent).not.toMatch(/[🔐🧬]/u)
+  })
+
+  it('switches between the owner screen and the claim screen, mounting the new card fresh (which is what triggers its fade-in)', () => {
+    renderConnected()
+
+    // Owner tab (no vault yet): the create-vault card is showing.
+    expect(screen.getByText('Set up your inheritance vault')).toBeInTheDocument()
+    expect(screen.queryByText('For heirs')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Claim' }))
+    const claimCard = screen.getByText('For heirs').closest('.ui-card')
+    expect(claimCard).toHaveClass('ui-enter')
+    expect(screen.queryByText('Set up your inheritance vault')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'My Vault' }))
+    expect(screen.getByText('Set up your inheritance vault').closest('.ui-card')).toHaveClass('ui-enter')
+    expect(screen.queryByText('For heirs')).not.toBeInTheDocument()
+  })
+
+  it('marks the active tab with the Arc gradient and leaves the other one plain', () => {
+    renderConnected()
+
+    expect(screen.getByRole('button', { name: 'My Vault' }).style.background).toContain('linear-gradient')
+    expect(screen.getByRole('button', { name: 'Claim' }).style.background).not.toContain('linear-gradient')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Claim' }))
+    expect(screen.getByRole('button', { name: 'Claim' }).style.background).toContain('linear-gradient')
+    expect(screen.getByRole('button', { name: 'My Vault' }).style.background).not.toContain('linear-gradient')
+  })
+
+  it('shows a neutral skeleton — never the "create a vault" form — while it is still finding out whether this wallet already has a vault', () => {
+    // Regression: hasVault was derived from `data` alone, so while the read was loading (data
+    // undefined) it fell through to the "no vault" branch and flashed the CreateVault form at every
+    // existing-vault owner, for as long as the read took to resolve.
+    mockUseAccount.mockReturnValue({ address: '0x1111111111111111111111111111111111111111', isConnected: true, chainId: ARC_TESTNET.id } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined, isLoading: true } as any)
+    mockUseSwitchChain.mockReturnValue({ switchChain: vi.fn(), status: 'idle' } as any)
+
+    render(<Home />)
+
+    expect(screen.getByTestId('vault-status-skeleton')).toBeInTheDocument()
+    expect(screen.queryByText('Set up your inheritance vault')).not.toBeInTheDocument()
+    expect(screen.queryByText('Your Vault')).not.toBeInTheDocument()
   })
 })

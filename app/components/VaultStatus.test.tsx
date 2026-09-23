@@ -175,3 +175,181 @@ describe('VaultStatus', () => {
     expect(screen.getByTestId('download-instructions-button')).not.toBeDisabled()
   })
 })
+
+describe('VaultStatus visual structure', () => {
+  const OWNER = '0x1111111111111111111111111111111111111111'
+  const HEIRS = [
+    { wallet: '0x2222222222222222222222222222222222222222', percentage: 60 },
+    { wallet: '0x3333333333333333333333333333333333333333', percentage: 40 },
+  ]
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    mockGenerateInheritancePdf.mockReset()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  function renderVault({ canClaim = false, daysLeft = 300 }: { canClaim?: boolean; daysLeft?: number } = {}) {
+    const now = new Date('2026-01-01T00:00:00Z')
+    vi.setSystemTime(now)
+
+    const lastCheckIn = BigInt(Math.floor(now.getTime() / 1000) - 10 * DAY)
+    mockUseAccount.mockReturnValue({ address: OWNER } as any)
+    mockUseReadContract.mockImplementation(((params: any) => {
+      switch (params.functionName) {
+        case 'getVault':
+          return { data: [BigInt(TIMELOCK_DAYS * DAY), BigInt(GRACE_DAYS * DAY), lastCheckIn, true, HEIRS], isLoading: false }
+        case 'timeUntilClaim':
+          return { data: BigInt(daysLeft * DAY) }
+        case 'canClaim':
+          return { data: canClaim }
+        default:
+          return { data: undefined }
+      }
+    }) as any)
+    return render(<VaultStatus />)
+  }
+
+  it('shows the four vault facts as a matching set of detail boxes, each with an icon, a label and a same-size value', () => {
+    renderVault()
+
+    const labels = ['Check-in every', 'Safety window', 'Last check-in', 'Next check-in deadline']
+    const boxes = labels.map(label => screen.getByText(label).closest('.ui-card-sm') as HTMLElement)
+
+    boxes.forEach(box => {
+      expect(box).not.toBeNull()
+      expect(box.querySelector('svg')).not.toBeNull()
+    })
+    // The old layout mixed 16px and 14px values; every value is now the same size and weight.
+    const values = boxes.map(box => box.children[1] as HTMLElement)
+    expect(new Set(values.map(v => v.style.fontSize)).size).toBe(1)
+    expect(new Set(values.map(v => v.style.fontWeight)).size).toBe(1)
+    expect(values[0]).toHaveTextContent('6 months')
+    expect(values[1]).toHaveTextContent('7 days')
+  })
+
+  it('lists every heir in its own hoverable row with an avatar chip and the share', () => {
+    renderVault()
+
+    expect(screen.getByText('Your heirs (2)')).toBeInTheDocument()
+    const rows = [HEIRS[0], HEIRS[1]].map(h => screen.getByText(`${h.wallet.slice(0, 12)}...${h.wallet.slice(-8)}`).closest('.ui-card-sm') as HTMLElement)
+
+    rows.forEach(row => {
+      expect(row).not.toBeNull()
+      expect(row.querySelector('svg')).not.toBeNull()
+    })
+    expect(rows[0]).toHaveTextContent('60%')
+    expect(rows[1]).toHaveTextContent('40%')
+  })
+
+  it('gives the two big cards the same header treatment as the action cards (icon chip + title)', () => {
+    renderVault()
+
+    for (const title of ['Your Vault', 'Your heirs (2)']) {
+      const card = screen.getByText(title).closest('.ui-card') as HTMLElement
+      expect(card).not.toBeNull()
+      expect(card.style.padding).toBe('1.5rem')
+      expect(screen.getByText(title).parentElement!.querySelector('svg')).not.toBeNull()
+    }
+  })
+
+  it('shows a "Protected" badge with an icon, and no emoji, while the vault is safe', () => {
+    renderVault()
+
+    const badge = screen.getByText('Protected')
+    expect(badge.querySelector('svg') ?? badge.parentElement?.querySelector('svg')).not.toBeNull()
+    expect(document.body.textContent).not.toMatch(/[✓⚠️⏰]/u)
+  })
+
+  it('flips to a "Claimable" badge and a prominent alert banner when heirs can claim right now', () => {
+    renderVault({ canClaim: true })
+
+    expect(screen.getByText('Claimable')).toBeInTheDocument()
+    const banner = screen.getByRole('alert')
+    expect(banner).toHaveTextContent('Your heirs can claim your funds right now')
+    expect(banner.style.padding).toBe('14px 16px') // prominent variant
+  })
+
+  it('shows the time remaining as a calm success message when there is plenty of time left', () => {
+    renderVault({ daysLeft: 300 })
+
+    const message = screen.getByText('300 days until heirs can claim').closest('[role="status"]') as HTMLElement
+    expect(message).not.toBeNull()
+    expect(message.querySelector('svg')).not.toBeNull()
+  })
+
+  it('shows a warning banner when the deadline is close', () => {
+    renderVault({ daysLeft: 3 })
+
+    const banner = screen.getByText('Only 3 days left — check in now!').closest('[role="status"]') as HTMLElement
+    expect(banner).not.toBeNull()
+    expect(banner.style.padding).toBe('14px 16px') // prominent variant
+  })
+
+  it('pins each detail value to the bottom of its box, so values in the same row line up even when one label wraps', () => {
+    // Regression: at 375px "Next check-in deadline" wraps to two lines, and its value used to drop
+    // below its neighbour's value ("Last check-in") instead of staying level with it.
+    renderVault()
+
+    for (const label of ['Check-in every', 'Safety window', 'Last check-in', 'Next check-in deadline']) {
+      const box = screen.getByText(label).closest('.ui-card-sm') as HTMLElement
+      expect(box.style.display).toBe('flex')
+      expect(box.style.flexDirection).toBe('column')
+      expect(box.style.justifyContent).toBe('space-between')
+    }
+  })
+})
+
+describe('VaultStatus loading state', () => {
+  it('shows the skeleton (not a blank screen) while getVault is still loading', () => {
+    mockUseAccount.mockReturnValue({ address: '0x1111111111111111111111111111111111111111' } as any)
+    mockUseReadContract.mockImplementation(((params: any) => {
+      if (params.functionName === 'getVault') return { data: undefined, isLoading: true }
+      return { data: undefined }
+    }) as any)
+
+    const { container } = render(<VaultStatus />)
+
+    expect(screen.getByTestId('vault-status-skeleton')).toBeInTheDocument()
+    expect(container).not.toBeEmptyDOMElement()
+    expect(screen.queryByText('Your Vault')).not.toBeInTheDocument()
+  })
+
+  it('replaces the skeleton with the real cards once getVault resolves', () => {
+    mockUseAccount.mockReturnValue({ address: '0x1111111111111111111111111111111111111111' } as any)
+    mockUseReadContract.mockImplementation(((params: any) => {
+      switch (params.functionName) {
+        case 'getVault':
+          return { data: [BigInt(TIMELOCK_DAYS * DAY), BigInt(GRACE_DAYS * DAY), 0n, true, []], isLoading: false }
+        case 'timeUntilClaim':
+          return { data: BigInt(TIMELOCK_DAYS * DAY) }
+        case 'canClaim':
+          return { data: false }
+        default:
+          return { data: undefined }
+      }
+    }) as any)
+
+    render(<VaultStatus />)
+
+    expect(screen.queryByTestId('vault-status-skeleton')).not.toBeInTheDocument()
+    expect(screen.getByText('Your Vault')).toBeInTheDocument()
+    expect(screen.getByText('Your Vault').closest('.ui-card')).toHaveClass('ui-enter')
+  })
+
+  it('shows nothing once loading is done and the wallet genuinely has no vault (not the skeleton)', () => {
+    mockUseAccount.mockReturnValue({ address: '0x1111111111111111111111111111111111111111' } as any)
+    mockUseReadContract.mockImplementation(((params: any) => {
+      if (params.functionName === 'getVault') return { data: [0n, 0n, 0n, false, []], isLoading: false }
+      return { data: undefined }
+    }) as any)
+
+    const { container } = render(<VaultStatus />)
+
+    expect(screen.queryByTestId('vault-status-skeleton')).not.toBeInTheDocument()
+    expect(container).toBeEmptyDOMElement()
+  })
+})

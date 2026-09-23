@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { COLOR_ACCENT, COLOR_ACCENT_TINT, COLOR_TEXT_PRIMARY } from '@/lib/theme'
+import './ui.css'
 
 export function RebrandBanner() {
   const [dismissed, setDismissed] = useState(false)
@@ -27,6 +28,7 @@ export function RebrandBanner() {
         This project was previously named ArcInherit and is being rebranded to Heirloom to follow Arc&apos;s brand guidelines.
       </span>
       <button
+        className="ui-focus-ring"
         onClick={() => setDismissed(true)}
         aria-label="Dismiss"
         style={{

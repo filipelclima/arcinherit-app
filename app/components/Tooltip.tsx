@@ -1,39 +1,57 @@
 'use client'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { COLOR_BG, COLOR_BG_SUBTLE, COLOR_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY } from '@/lib/theme'
+import './ui.css'
 
-export function Tooltip({ text, children }: { text: string; children: React.ReactNode }) {
+// Follows the WAI-ARIA "tooltip" pattern for a non-interactive trigger: tabIndex={0} + aria-describedby
+// make it reachable and readable via keyboard/screen reader, without pretending it's a button (it
+// doesn't do anything on click, so no role="button" — see
+// https://www.w3.org/WAI/ARIA/apg/patterns/tooltip/).
+export function Tooltip({ text, children, label }: { text: string; children: React.ReactNode; label?: string }) {
   const [show, setShow] = useState(false)
+  const id = useId()
+
   return (
     <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
       <span
+        tabIndex={0}
+        aria-label={label}
+        aria-describedby={id}
+        className="ui-focus-ring"
         onMouseEnter={() => setShow(true)}
         onMouseLeave={() => setShow(false)}
-        style={{ cursor: 'help' }}
+        onFocus={() => setShow(true)}
+        onBlur={() => setShow(false)}
+        onKeyDown={e => { if (e.key === 'Escape') setShow(false) }}
+        style={{ cursor: 'help', borderRadius: '50%' }}
       >
         {children}
       </span>
       {show && (
-        <span style={{
-          position: 'absolute',
-          bottom: '100%',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          marginBottom: 6,
-          background: COLOR_BG,
-          border: `1px solid ${COLOR_BORDER}`,
-          borderRadius: 8,
-          padding: '8px 12px',
-          fontSize: 12,
-          color: COLOR_TEXT_SECONDARY,
-          whiteSpace: 'normal',
-          width: 220,
-          zIndex: 50,
-          lineHeight: 1.5,
-          textAlign: 'left',
-          pointerEvents: 'none',
-          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
-        }}>
+        <span
+          id={id}
+          role="tooltip"
+          style={{
+            position: 'absolute',
+            bottom: '100%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            marginBottom: 6,
+            background: COLOR_BG,
+            border: `1px solid ${COLOR_BORDER}`,
+            borderRadius: 8,
+            padding: '8px 12px',
+            fontSize: 12,
+            color: COLOR_TEXT_SECONDARY,
+            whiteSpace: 'normal',
+            width: 220,
+            zIndex: 50,
+            lineHeight: 1.5,
+            textAlign: 'left',
+            pointerEvents: 'none',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
+          }}
+        >
           {text}
         </span>
       )}
@@ -43,8 +61,8 @@ export function Tooltip({ text, children }: { text: string; children: React.Reac
 
 export function InfoIcon({ tooltip }: { tooltip: string }) {
   return (
-    <Tooltip text={tooltip}>
-      <span style={{
+    <Tooltip text={tooltip} label="More information">
+      <span aria-hidden="true" style={{
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',

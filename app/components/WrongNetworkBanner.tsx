@@ -1,5 +1,7 @@
 'use client'
 import { COLOR_WARNING, COLOR_WARNING_BG, COLOR_WARNING_BORDER } from '@/lib/theme'
+import { AlertTriangleIcon } from './icons'
+import './ui.css'
 
 export function WrongNetworkBanner({ isWrongNetwork, isSwitching, onSwitch }: {
   isWrongNetwork: boolean
@@ -11,10 +13,14 @@ export function WrongNetworkBanner({ isWrongNetwork, isSwitching, onSwitch }: {
   return (
     <button
       data-testid="wrong-network-banner"
+      className="ui-press"
       onClick={onSwitch}
       disabled={isSwitching}
       style={{
-        display: 'block',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
         width: '100%',
         background: COLOR_WARNING_BG,
         borderTop: 'none',
@@ -30,7 +36,8 @@ export function WrongNetworkBanner({ isWrongNetwork, isSwitching, onSwitch }: {
         cursor: isSwitching ? 'default' : 'pointer',
       }}
     >
-      {isSwitching ? 'Switching to Arc Testnet…' : '⚠️ Wrong network — click to switch to Arc Testnet'}
+      {!isSwitching && <AlertTriangleIcon size={16} color={COLOR_WARNING} />}
+      {isSwitching ? 'Switching to Arc Testnet…' : 'Wrong network — click to switch to Arc Testnet'}
     </button>
   )
 }

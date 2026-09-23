@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useAccount, useConnect, useDisconnect } from 'wagmi'
+import './ui.css'
 import { ARC_GRADIENT, COLOR_BG, COLOR_BG_SUBTLE, COLOR_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY } from '@/lib/theme'
 
 export function ConnectWallet({ size = 'md' }: { size?: 'md' | 'lg' }) {
@@ -28,6 +29,7 @@ export function ConnectWallet({ size = 'md' }: { size?: 'md' | 'lg' }) {
           {address.slice(0, 6)}...{address.slice(-4)}
         </div>
         <button
+          className="ui-press"
           onClick={() => disconnect()}
           style={{ background: 'transparent', border: `1px solid ${COLOR_BORDER}`, color: COLOR_TEXT_SECONDARY, padding: '6px 14px', fontSize: 13, whiteSpace: 'nowrap', borderRadius: 8 }}
         >
@@ -48,6 +50,7 @@ export function ConnectWallet({ size = 'md' }: { size?: 'md' | 'lg' }) {
     const connector = availableConnectors[0]
     return (
       <button
+        className="ui-press"
         onClick={() => connector && connect({ connector })}
         style={{ background: ARC_GRADIENT, border: 'none', color: '#fff', padding: ctaPadding, fontSize: ctaFontSize, fontWeight: 600, whiteSpace: 'nowrap', borderRadius: 8 }}
       >
@@ -60,6 +63,7 @@ export function ConnectWallet({ size = 'md' }: { size?: 'md' | 'lg' }) {
   return (
     <div style={{ position: 'relative' }}>
       <button
+        className="ui-press"
         onClick={() => setShowPicker(v => !v)}
         style={{ background: ARC_GRADIENT, border: 'none', color: '#fff', padding: ctaPadding, fontSize: ctaFontSize, fontWeight: 600, whiteSpace: 'nowrap', borderRadius: 8 }}
       >
@@ -74,6 +78,7 @@ export function ConnectWallet({ size = 'md' }: { size?: 'md' | 'lg' }) {
           {availableConnectors.map(connector => (
             <button
               key={connector.uid}
+              className="ui-press"
               onClick={() => {
                 connect({ connector })
                 setShowPicker(false)
