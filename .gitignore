@@ -34,3 +34,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Claude Code local permission grants / session state — machine-specific, not project config.
+# .claude/launch.json (dev server port) is still tracked; only this file is local.
+.claude/settings.local.json
