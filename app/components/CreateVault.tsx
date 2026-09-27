@@ -3,10 +3,53 @@ import { useState } from 'react'
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
 import { ARC_TESTNET, CONTRACT_ADDRESS, ABI } from '@/lib/contract'
 import { InfoIcon } from './Tooltip'
-import { ARC_GRADIENT, COLOR_ACCENT_TINT, COLOR_BG, COLOR_BG_SUBTLE, COLOR_BORDER, COLOR_DANGER, COLOR_DANGER_BG, COLOR_DANGER_BORDER, COLOR_SUCCESS, COLOR_SUCCESS_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY, COLOR_TEXT_TERTIARY } from '@/lib/theme'
+import { ARC_GRADIENT, COLOR_ACCENT, COLOR_BG_SUBTLE, COLOR_BORDER, COLOR_DANGER, COLOR_DANGER_BG, COLOR_DANGER_BORDER, COLOR_SUCCESS, COLOR_SUCCESS_BG, COLOR_SUCCESS_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY, COLOR_TEXT_TERTIARY } from '@/lib/theme'
 import { useIsWrongNetwork } from '../hooks/useEnsureArcNetwork'
+import { CheckCircleIcon, LockIcon, ShieldIcon } from './icons'
+import { actionButton, Card, CardHeader, CardHeaderSkeleton, FieldError, SECTION_GAP, Skeleton, StatusMessage } from './ui'
 
 interface Heir { wallet: string; percentage: number }
+
+const TIMELOCK_PRESETS = [90, 180, 365, 730]
+const GRACE_PRESETS = [7, 14, 30, 60]
+
+// Same trick as the action buttons: the unselected outline is an inset shadow, not a border, so the
+// gradient never sits under a transparent border (where it would tile and leave a 1px off-color edge).
+const chipStyle = (selected: boolean) => ({
+  background: selected ? ARC_GRADIENT : COLOR_BG_SUBTLE,
+  border: 'none',
+  boxShadow: selected ? 'none' : `inset 0 0 0 1px ${COLOR_BORDER}`,
+  color: selected ? '#fff' : COLOR_TEXT_SECONDARY,
+  padding: '8px 16px',
+  fontSize: 13,
+  borderRadius: 8,
+})
+
+const sectionLabelStyle = { fontSize: 13, color: COLOR_TEXT_SECONDARY, display: 'flex', alignItems: 'center', marginBottom: 8, fontWeight: 500 } as const
+
+// The loading state while we're checking if this address already has a vault — same card, a chip
+// row skeleton for each of the two preset groups, an input-row skeleton for the heir, and a button.
+function CreateVaultSkeleton() {
+  return (
+    <Card data-testid="create-vault-skeleton">
+      <CardHeaderSkeleton titleWidth={220} />
+      {[0, 1].map(i => (
+        <div key={i} style={{ marginBottom: SECTION_GAP }}>
+          <Skeleton width={i === 0 ? 170 : 200} height={12} style={{ marginBottom: 8 }} />
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[0, 1, 2, 3].map(j => <Skeleton key={j} width={64} height={32} radius={8} />)}
+          </div>
+        </div>
+      ))}
+      <div style={{ marginBottom: SECTION_GAP }}>
+        <Skeleton width={110} height={12} style={{ marginBottom: 8 }} />
+        <Skeleton width="100%" height={38} radius={8} />
+      </div>
+      <Skeleton width="100%" height={80} radius={10} style={{ marginBottom: SECTION_GAP }} />
+      <Skeleton width="100%" height={48} radius={10} />
+    </Card>
+  )
+}
 
 export function CreateVault({ onCreated }: { onCreated: () => void }) {
   const { address } = useAccount()
@@ -16,7 +59,7 @@ export function CreateVault({ onCreated }: { onCreated: () => void }) {
   const [heirs, setHeirs] = useState<Heir[]>([{ wallet: '', percentage: 100 }])
   const [error, setError] = useState('')
 
-  const { data: existingVault } = useReadContract({
+  const { data: existingVault, isLoading: isLoadingVault } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: ABI,
     functionName: 'getVault',
@@ -27,23 +70,30 @@ export function CreateVault({ onCreated }: { onCreated: () => void }) {
   const { writeContract, data: hash, isPending } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
 
+  // isSuccess (just created it) takes priority: the loading flag below reflects the read of the vault
+  // that may not have refetched yet, and would otherwise briefly cover the success screen with a skeleton.
   if (isSuccess) {
+    const continueButton = actionButton(true)
     return (
-      <div style={{ background: COLOR_BG, border: `1px solid ${COLOR_SUCCESS_BORDER}`, borderRadius: 12, padding: '2rem 1.5rem', marginBottom: '1.5rem', textAlign: 'center' }}>
-        <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
+      <Card style={{ border: `1px solid ${COLOR_SUCCESS_BORDER}`, padding: '2rem 1.5rem', textAlign: 'center' }}>
+        <div style={{ width: 56, height: 56, borderRadius: '50%', background: COLOR_SUCCESS_BG, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+          <CheckCircleIcon size={28} color={COLOR_SUCCESS} />
+        </div>
         <div style={{ fontSize: 18, fontWeight: 700, color: COLOR_TEXT_PRIMARY, marginBottom: 8 }}>Vault created!</div>
         <div style={{ fontSize: 14, color: COLOR_TEXT_SECONDARY, marginBottom: '1.5rem', lineHeight: 1.6 }}>
           Now deposit tokens to protect your inheritance.
         </div>
         <button
+          {...continueButton}
+          style={{ ...continueButton.style, width: 'auto', padding: '12px 24px' }}
           onClick={onCreated}
-          style={{ background: ARC_GRADIENT, border: 'none', color: '#fff', padding: '12px 24px', fontWeight: 700, fontSize: 15, borderRadius: 10 }}
         >
           Continue to deposit →
         </button>
-      </div>
+      </Card>
     )
   }
+  if (isLoadingVault) return <CreateVaultSkeleton />
   if (existingVault && existingVault[3]) return null
 
   const totalPct = heirs.reduce((s, h) => s + (h.percentage || 0), 0)
@@ -79,38 +129,33 @@ export function CreateVault({ onCreated }: { onCreated: () => void }) {
   }
 
   return (
-    <div style={{ background: COLOR_BG, border: `1px solid ${COLOR_BORDER}`, borderRadius: 12, padding: '1.5rem', marginBottom: '1.5rem' }}>
-      <div style={{ fontSize: 17, fontWeight: 700, color: COLOR_TEXT_PRIMARY, marginBottom: 4 }}>Set up your inheritance vault</div>
-      <div style={{ fontSize: 13, color: COLOR_TEXT_SECONDARY, marginBottom: '1.5rem', lineHeight: 1.6 }}>
-        This is a one-time setup. You can change your heirs, deposit, or withdraw at any time after.
-      </div>
+    <Card>
+      <CardHeader
+        icon={<ShieldIcon size={18} />}
+        title="Set up your inheritance vault"
+        description="This is a one-time setup. You can change your heirs, deposit, or withdraw at any time after."
+      />
 
       {/* Timelock */}
-      <div style={{ marginBottom: '1.25rem' }}>
-        <label style={{ fontSize: 13, color: COLOR_TEXT_SECONDARY, display: 'flex', alignItems: 'center', marginBottom: 8, fontWeight: 500 }}>
+      <div style={{ marginBottom: SECTION_GAP }}>
+        <label style={sectionLabelStyle}>
           How often will you check in?
           <InfoIcon tooltip="This is the maximum time you can go without logging in. If you miss this deadline, your heirs will eventually be able to claim your funds. We recommend 1 year (365 days)." />
         </label>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {[90, 180, 365, 730].map(d => (
+          {TIMELOCK_PRESETS.map(d => (
             <button
               key={d}
+              className="ui-press"
               onClick={() => setTimelockDays(d)}
-              style={{
-                background: timelockDays === d ? ARC_GRADIENT : COLOR_BG_SUBTLE,
-                border: `1px solid ${timelockDays === d ? 'transparent' : COLOR_BORDER}`,
-                color: timelockDays === d ? '#fff' : COLOR_TEXT_SECONDARY,
-                padding: '8px 16px',
-                fontSize: 13,
-                borderRadius: 8,
-              }}
+              style={chipStyle(timelockDays === d)}
             >
               {d === 90 ? '3 months' : d === 180 ? '6 months' : d === 365 ? '1 year ✓' : '2 years'}
             </button>
           ))}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-          <span style={{ fontSize: 12, color: COLOR_TEXT_TERTIARY }}>Custom (days):</span>
+          <span style={{ fontSize: 12, color: COLOR_TEXT_SECONDARY }}>Custom (days):</span>
           <input
             type="number" min={30} value={timelockDays}
             onChange={e => setTimelockDays(Number(e.target.value))}
@@ -120,24 +165,18 @@ export function CreateVault({ onCreated }: { onCreated: () => void }) {
       </div>
 
       {/* Grace period */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <label style={{ fontSize: 13, color: COLOR_TEXT_SECONDARY, display: 'flex', alignItems: 'center', marginBottom: 8, fontWeight: 500 }}>
+      <div style={{ marginBottom: SECTION_GAP }}>
+        <label style={sectionLabelStyle}>
           Safety window after missed check-in
           <InfoIcon tooltip="After you miss a check-in, heirs must wait this extra time before they can claim. This protects you in case you just forgot — you can still check in during this window to cancel the inheritance. Minimum 7 days." />
         </label>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {[7, 14, 30, 60].map(d => (
+          {GRACE_PRESETS.map(d => (
             <button
               key={d}
+              className="ui-press"
               onClick={() => setGraceDays(d)}
-              style={{
-                background: graceDays === d ? ARC_GRADIENT : COLOR_BG_SUBTLE,
-                border: `1px solid ${graceDays === d ? 'transparent' : COLOR_BORDER}`,
-                color: graceDays === d ? '#fff' : COLOR_TEXT_SECONDARY,
-                padding: '8px 16px',
-                fontSize: 13,
-                borderRadius: 8,
-              }}
+              style={chipStyle(graceDays === d)}
             >
               {d === 7 ? '7 days' : d === 14 ? '2 weeks' : d === 30 ? '1 month ✓' : '2 months'}
             </button>
@@ -146,9 +185,9 @@ export function CreateVault({ onCreated }: { onCreated: () => void }) {
       </div>
 
       {/* Heirs */}
-      <div style={{ marginBottom: '1.5rem' }}>
+      <div style={{ marginBottom: SECTION_GAP }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <label style={{ fontSize: 13, color: COLOR_TEXT_SECONDARY, fontWeight: 500, display: 'flex', alignItems: 'center' }}>
+          <label style={{ ...sectionLabelStyle, marginBottom: 0 }}>
             Who are your heirs?
             <InfoIcon tooltip="Add the wallet addresses of the people who should inherit your funds. Each heir gets the percentage you assign. All percentages must add up to 100%." />
           </label>
@@ -178,27 +217,29 @@ export function CreateVault({ onCreated }: { onCreated: () => void }) {
                 </div>
                 {heirs.length > 1 && (
                   <button
+                    className="ui-press"
                     onClick={() => removeHeir(i)}
                     style={{ background: COLOR_DANGER_BG, color: COLOR_DANGER, border: `1px solid ${COLOR_DANGER_BORDER}`, padding: '8px 12px', minWidth: 36, borderRadius: 8 }}
                   >×</button>
                 )}
               </div>
               {heir.wallet && !heir.wallet.startsWith('0x') && (
-                <div style={{ fontSize: 11, color: COLOR_DANGER, marginTop: 4 }}>⚠️ Wallet address must start with 0x</div>
+                <FieldError>Wallet address must start with 0x</FieldError>
               )}
             </div>
           ))}
         </div>
         <button
+          className="ui-press"
           onClick={addHeir}
-          style={{ background: 'transparent', border: `1px dashed ${COLOR_BORDER}`, color: COLOR_TEXT_TERTIARY, marginTop: 8, width: '100%', padding: '10px', borderRadius: 8 }}
+          style={{ background: 'transparent', border: `1px dashed ${COLOR_BORDER}`, color: COLOR_TEXT_SECONDARY, marginTop: 8, width: '100%', padding: '10px', borderRadius: 8 }}
         >
           + Add another heir
         </button>
       </div>
 
       {/* Summary */}
-      <div style={{ background: COLOR_BG_SUBTLE, border: `1px solid ${COLOR_BORDER}`, borderRadius: 10, padding: '1rem', marginBottom: '1.25rem', fontSize: 13, color: COLOR_TEXT_SECONDARY, lineHeight: 1.8 }}>
+      <div style={{ background: COLOR_BG_SUBTLE, border: `1px solid ${COLOR_BORDER}`, borderRadius: 10, padding: '1rem', marginBottom: SECTION_GAP, fontSize: 13, color: COLOR_TEXT_SECONDARY, lineHeight: 1.8 }}>
         <div style={{ fontWeight: 600, color: COLOR_TEXT_PRIMARY, marginBottom: 6 }}>Summary</div>
         <div>• You must check in at least once every <strong style={{ color: COLOR_TEXT_PRIMARY }}>{timelockDays} days</strong></div>
         <div>• After a missed check-in, heirs must wait <strong style={{ color: COLOR_TEXT_PRIMARY }}>{graceDays} more days</strong> before claiming</div>
@@ -206,22 +247,20 @@ export function CreateVault({ onCreated }: { onCreated: () => void }) {
       </div>
 
       {error && (
-        <div style={{ background: COLOR_DANGER_BG, border: `1px solid ${COLOR_DANGER_BORDER}`, borderRadius: 8, padding: '10px 14px', fontSize: 13, color: COLOR_DANGER, marginBottom: '1rem' }}>
-          ⚠️ {error}
-        </div>
+        <StatusMessage variant="error" style={{ marginBottom: '1rem' }}>{error}</StatusMessage>
       )}
 
-      <div style={{ background: COLOR_ACCENT_TINT, border: '1px solid rgba(0, 23, 103, 0.15)', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: COLOR_TEXT_SECONDARY, marginBottom: '1rem', lineHeight: 1.6 }}>
-        🔒 <strong style={{ color: COLOR_TEXT_PRIMARY }}>This is irreversible once created.</strong> The contract rules cannot be changed by anyone — but you can still update heirs, deposit tokens, withdraw, or cancel the vault at any time.
-      </div>
+      <StatusMessage variant="info" icon={<LockIcon size={16} color={COLOR_ACCENT} />} style={{ marginBottom: '1rem', fontSize: 12, fontWeight: 400, lineHeight: 1.6 }}>
+        <strong style={{ color: COLOR_TEXT_PRIMARY }}>This is irreversible once created.</strong> The contract rules cannot be changed by anyone — but you can still update heirs, deposit tokens, withdraw, or cancel the vault at any time.
+      </StatusMessage>
 
       <button
+        {...actionButton(true)}
         onClick={handleCreate}
         disabled={isPending || isConfirming || !address || isWrongNetwork}
-        style={{ background: ARC_GRADIENT, border: 'none', color: '#fff', width: '100%', padding: '14px', fontWeight: 700, fontSize: 15, borderRadius: 10 }}
       >
         {isPending ? 'Confirm in your wallet...' : isConfirming ? 'Creating vault...' : 'Create my inheritance vault →'}
       </button>
-    </div>
+    </Card>
   )
 }

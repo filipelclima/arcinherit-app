@@ -1,20 +1,74 @@
 'use client'
 import { useState } from 'react'
+import type { CSSProperties } from 'react'
 import { useAccount, useReadContract } from 'wagmi'
 import { ConnectWallet } from './components/ConnectWallet'
 import { RebrandBanner } from './components/RebrandBanner'
+import { Hero } from './components/Hero'
 import { WrongNetworkBanner } from './components/WrongNetworkBanner'
 import { useEnsureArcNetwork } from './hooks/useEnsureArcNetwork'
+import { useScrollReveal } from './hooks/useScrollReveal'
 import { HowItWorks } from './components/HowItWorks'
-import { VaultStatus } from './components/VaultStatus'
+import { VaultStatus, VaultStatusSkeleton } from './components/VaultStatus'
 import { CreateVault } from './components/CreateVault'
 import { CheckIn } from './components/CheckIn'
 import { Deposit } from './components/Deposit'
 import { ClaimInheritance } from './components/ClaimInheritance'
+import { CheckCircleIcon, LockIcon, MoonIcon, SunIcon, UsersIcon } from './components/icons'
+import './components/ui.css'
+import { useTheme } from './hooks/useTheme'
 import { CONTRACT_ADDRESS, ABI } from '@/lib/contract'
-import { ARC_GRADIENT, COLOR_BG, COLOR_BG_SUBTLE, COLOR_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY, COLOR_TEXT_TERTIARY } from '@/lib/theme'
+import { ARC_GRADIENT, ARC_GRADIENT_TEXT, COLOR_BG, COLOR_BG_SUBTLE, COLOR_BORDER, COLOR_SUCCESS, COLOR_SUCCESS_BG, COLOR_SUCCESS_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY, COLOR_TEXT_TERTIARY } from '@/lib/theme'
+
+// Sun/moon toggle: shows the icon for what clicking WILL do (sun = "go light" while dark, moon =
+// "go dark" while light), not the current state — the common convention for this control.
+function ThemeToggle() {
+  const { theme, toggle } = useTheme()
+  return (
+    <button
+      className="ui-press"
+      onClick={toggle}
+      data-testid="theme-toggle"
+      aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'transparent', border: `1px solid ${COLOR_BORDER}`, color: COLOR_TEXT_SECONDARY,
+        padding: 8, borderRadius: 8, flexShrink: 0,
+      }}
+    >
+      {theme === 'dark' ? <SunIcon size={16} color={COLOR_TEXT_SECONDARY} /> : <MoonIcon size={16} color={COLOR_TEXT_SECONDARY} />}
+    </button>
+  )
+}
 
 const CONTRACT_EXPLORER_URL = `https://testnet.arcscan.app/address/${CONTRACT_ADDRESS}`
+// The "Code" tab of the address page, where Arcscan (Blockscout) shows the verified source —
+// confirmed by navigating there manually: Blockscout uses a ?tab=contract query param, not a #code
+// hash fragment.
+const CONTRACT_CODE_URL = `${CONTRACT_EXPLORER_URL}?tab=contract`
+
+// Small trust signal: a link to the contract's verified source on the explorer. Neutral/green like
+// the "Protected" badge in VaultStatus, deliberately not the Arc gradient — that's reserved for CTAs
+// and primary emphasis, not a reassurance badge.
+function VerifiedContractBadge({ style }: { style?: CSSProperties }) {
+  return (
+    <a
+      href={CONTRACT_CODE_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      data-testid="verified-contract-badge"
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0,
+        background: COLOR_SUCCESS_BG, border: `1px solid ${COLOR_SUCCESS_BORDER}`,
+        borderRadius: 8, padding: '4px 10px', fontSize: 12, fontWeight: 600, color: COLOR_SUCCESS,
+        textDecoration: 'none', ...style,
+      }}
+    >
+      <CheckCircleIcon size={14} color={COLOR_SUCCESS} />
+      Verified on Arcscan
+    </a>
+  )
+}
 
 type Tab = 'owner' | 'heir'
 
@@ -27,8 +81,11 @@ export default function Home() {
   // only ever triggers a single wallet_switchEthereumChain prompt — see
   // app/hooks/useEnsureArcNetwork.ts.
   const { isWrongNetwork, switchToArc, isSwitching } = useEnsureArcNetwork()
+  // Only rendered below the fold on the disconnected landing page — the hook itself is safe to call
+  // unconditionally regardless of which branch actually mounts the FAQ card.
+  const faqReveal = useScrollReveal<HTMLDivElement>()
 
-  const { data: vault } = useReadContract({
+  const { data: vault, isLoading: isLoadingVault } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: ABI,
     functionName: 'getVault',
@@ -49,14 +106,16 @@ export default function Home() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 22, fontWeight: 700, color: COLOR_TEXT_PRIMARY, letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
             {/* eslint-disable-next-line @next/next/no-img-element -- small static header logo, next/image's optimizer isn't needed here */}
             <img src="/heirloom-icon.png" alt="" aria-hidden="true" data-testid="header-logo-icon" width={24} height={24} style={{ display: 'block' }} />
-            <span><span style={{ backgroundImage: ARC_GRADIENT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Heir</span>loom</span>
+            <span><span style={{ backgroundImage: ARC_GRADIENT_TEXT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Heir</span>loom</span>
           </div>
           <div style={{ fontSize: 11, background: COLOR_BG_SUBTLE, border: `1px solid ${COLOR_BORDER}`, color: COLOR_TEXT_SECONDARY, borderRadius: 6, padding: '2px 8px', whiteSpace: 'nowrap' }}>
             Arc Testnet
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <ThemeToggle />
           <button
+            className="ui-press"
             onClick={() => setShowHowItWorks(!showHowItWorks)}
             style={{ background: 'transparent', border: `1px solid ${COLOR_BORDER}`, color: COLOR_TEXT_SECONDARY, padding: '6px 14px', fontSize: 13, whiteSpace: 'nowrap', borderRadius: 8 }}
           >
@@ -66,30 +125,7 @@ export default function Home() {
         </div>
       </div>
 
-      {!isConnected && (
-        /* Hero */
-        <div style={{ background: COLOR_BG, borderBottom: `1px solid ${COLOR_BORDER}` }}>
-          <div style={{ maxWidth: 700, margin: '0 auto', padding: '4rem 1rem', textAlign: 'center' }}>
-            <div style={{
-              display: 'inline-block', background: ARC_GRADIENT, color: '#fff', fontSize: 13, fontWeight: 600,
-              borderRadius: 9999, padding: '6px 16px', marginBottom: 20, whiteSpace: 'nowrap',
-            }}>
-              Built on Arc
-            </div>
-            <div style={{ fontSize: 46, fontWeight: 800, color: COLOR_TEXT_PRIMARY, marginBottom: 16, letterSpacing: '-0.03em', lineHeight: 1.15 }}>
-              Your crypto.<br />
-              <span style={{ backgroundImage: ARC_GRADIENT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Your heirs.</span>
-            </div>
-            <div style={{ fontSize: 16, color: COLOR_TEXT_SECONDARY, marginBottom: 12, maxWidth: 500, margin: '0 auto 12px', lineHeight: 1.7 }}>
-              Set up an onchain inheritance vault in minutes. If you stop checking in, your designated heirs can claim their share automatically — no lawyers, no paperwork, no middlemen.
-            </div>
-            <div style={{ fontSize: 13, color: COLOR_TEXT_TERTIARY, marginBottom: 32 }}>
-              Built on Arc · Non-custodial · Immutable · Less than $0.01 per transaction
-            </div>
-            <ConnectWallet size="lg" />
-          </div>
-        </div>
-      )}
+      {!isConnected && <Hero />}
 
       <div style={{ maxWidth: 700, margin: '0 auto', padding: '2rem 1rem' }}>
 
@@ -99,7 +135,11 @@ export default function Home() {
             {showHowItWorks && <HowItWorks />}
 
             {/* FAQ */}
-            <div style={{ background: COLOR_BG, border: `1px solid ${COLOR_BORDER}`, borderRadius: 12, padding: '1.5rem', marginBottom: '2rem' }}>
+            <div
+              ref={faqReveal.ref}
+              className={`scroll-reveal${faqReveal.revealed ? ' is-revealed' : ''}`}
+              style={{ background: COLOR_BG, border: `1px solid ${COLOR_BORDER}`, borderRadius: 12, padding: '1.5rem', marginBottom: '2rem' }}
+            >
               <div style={{ fontSize: 16, fontWeight: 700, color: COLOR_TEXT_PRIMARY, marginBottom: '1.25rem' }}>Common questions</div>
               {[
                 {
@@ -120,12 +160,14 @@ export default function Home() {
                 },
                 {
                   q: 'Do I need to trust Heirloom?',
-                  a: 'No. The contract is immutable — not even the developers can access your funds or change the rules. You can read the verified contract code on Blockscout.'
+                  a: 'No. The contract is immutable — not even the developers can access your funds or change the rules. You can read the verified contract code on Blockscout.',
+                  verified: true,
                 },
               ].map((item, i) => (
                 <div key={i} style={{ marginBottom: i < 4 ? '1rem' : 0, paddingBottom: i < 4 ? '1rem' : 0, borderBottom: i < 4 ? `1px solid ${COLOR_BORDER}` : 'none' }}>
                   <div style={{ fontSize: 14, fontWeight: 600, color: COLOR_TEXT_PRIMARY, marginBottom: 6 }}>{item.q}</div>
                   <div style={{ fontSize: 13, color: COLOR_TEXT_SECONDARY, lineHeight: 1.7 }}>{item.a}</div>
+                  {item.verified && <VerifiedContractBadge style={{ marginTop: 10 }} />}
                 </div>
               ))}
             </div>
@@ -142,39 +184,50 @@ export default function Home() {
             {/* Tabs */}
             <div style={{ display: 'flex', gap: 8, marginBottom: '1.5rem', background: COLOR_BG_SUBTLE, border: `1px solid ${COLOR_BORDER}`, borderRadius: 10, padding: 4 }}>
               {([
-                { id: 'owner', label: '🔐 My Vault', desc: 'Manage your inheritance vault' },
-                { id: 'heir', label: '🧬 Claim', desc: 'Claim an inheritance' },
-              ] as { id: Tab; label: string; desc: string }[]).map(t => (
+                { id: 'owner', label: 'My Vault', Icon: LockIcon },
+                { id: 'heir', label: 'Claim', Icon: UsersIcon },
+              ] as { id: Tab; label: string; Icon: typeof LockIcon }[]).map(({ id, label, Icon }) => (
                 <button
-                  key={t.id}
-                  onClick={() => setTab(t.id)}
+                  key={id}
+                  className="ui-press"
+                  onClick={() => setTab(id)}
                   style={{
                     flex: 1,
-                    background: tab === t.id ? ARC_GRADIENT : 'transparent',
-                    color: tab === t.id ? '#fff' : COLOR_TEXT_SECONDARY,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    background: tab === id ? ARC_GRADIENT : 'transparent',
+                    color: tab === id ? '#fff' : COLOR_TEXT_SECONDARY,
                     border: 'none',
                     borderRadius: 8,
                     padding: '10px',
-                    fontWeight: tab === t.id ? 600 : 400,
+                    fontWeight: tab === id ? 600 : 400,
                     fontSize: 14,
                   }}
                 >
-                  {t.label}
+                  <Icon size={16} color={tab === id ? '#fff' : COLOR_TEXT_SECONDARY} />
+                  {label}
                 </button>
               ))}
             </div>
 
             {tab === 'owner' && (
-              <>
-                <VaultStatus key={refreshKey} />
-                {!hasVault && <CreateVault onCreated={() => setRefreshKey(k => k + 1)} />}
-                {hasVault && (
-                  <>
-                    <CheckIn />
-                    <Deposit />
-                  </>
-                )}
-              </>
+              // Don't decide between "you have a vault" (VaultStatus) and "you don't" (CreateVault)
+              // until we actually know — otherwise CreateVault's form flashes for existing-vault
+              // owners for the instant getVault takes to resolve. One neutral skeleton stands in for
+              // either outcome until then.
+              isLoadingVault ? (
+                <VaultStatusSkeleton />
+              ) : (
+                <>
+                  <VaultStatus key={refreshKey} />
+                  {!hasVault && <CreateVault onCreated={() => setRefreshKey(k => k + 1)} />}
+                  {hasVault && (
+                    <>
+                      <CheckIn />
+                      <Deposit />
+                    </>
+                  )}
+                </>
+              )
             )}
 
             {tab === 'heir' && <ClaimInheritance />}
@@ -191,10 +244,16 @@ export default function Home() {
               <div style={{ fontSize: 11, color: COLOR_TEXT_TERTIARY }}>Built on Arc · Non-custodial · Immutable</div>
             </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, fontSize: 12 }}>
-            <a href="https://github.com/filipelclima/ArcInherit" target="_blank" rel="noopener noreferrer" style={{ color: COLOR_TEXT_SECONDARY }}>
-              GitHub ↗
-            </a>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, fontSize: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <a href="https://github.com/filipelclima/arcinherit-app" target="_blank" rel="noopener noreferrer" style={{ color: COLOR_TEXT_SECONDARY }}>
+                Frontend ↗
+              </a>
+              <span style={{ color: COLOR_TEXT_TERTIARY }}>·</span>
+              <a href="https://github.com/filipelclima/ArcInherit" target="_blank" rel="noopener noreferrer" style={{ color: COLOR_TEXT_SECONDARY }}>
+                Contract ↗
+              </a>
+            </div>
             <a
               href={CONTRACT_EXPLORER_URL}
               target="_blank"
@@ -203,6 +262,7 @@ export default function Home() {
             >
               {CONTRACT_ADDRESS.slice(0, 10)}...{CONTRACT_ADDRESS.slice(-6)} ↗
             </a>
+            <VerifiedContractBadge />
           </div>
         </div>
       </div>

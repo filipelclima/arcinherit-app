@@ -2,13 +2,86 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Light theme (default) — dark overrides are the `.dark` block right below. Every color token in
+   lib/theme.ts that needs to differ per theme resolves to one of these custom properties; components
+   never branch on theme themselves, they just use the token exactly as before. See useTheme.tsx for
+   how `.dark` gets added to <html>, and the inline script in layout.tsx for the flash-free initial
+   value (localStorage, falling back to prefers-color-scheme). */
 :root {
   --bg: #FFFFFF;
+  --bg-subtle: #FAFAFA;
+  --bg-translucent: rgba(255, 255, 255, 0.6);
   --surface: #FFFFFF;
   --border: #E5E7EB;
+  --border-translucent: rgba(229, 231, 235, 0.6);
   --text: #0A0A0A;
+  --text-tertiary: #9CA3AF;
   --muted: #6B7280;
   --accent: #001767;
+  --accent-tint: rgba(0, 23, 103, 0.08);
+  --accent-tint-vivid: rgba(0, 23, 103, 0.18);
+  --input-focus-shadow: rgba(0, 23, 103, 0.12);
+  --skeleton: #E5E7EB;
+  --gradient-text: linear-gradient(135deg, #001767 0%, #73112C 100%);
+  --gradient-text-vivid: linear-gradient(135deg, #001767 0%, #8E0C2F 100%);
+
+  --success: #16A34A;
+  --success-bg: #F0FDF4;
+  --success-border: #BBF7D0;
+  --warning: #D97706;
+  --warning-bg: #FFFBEB;
+  --warning-border: #FDE68A;
+  --danger: #DC2626;
+  --danger-bg: #FEF2F2;
+  --danger-border: #FECACA;
+
+  /* HeroNetwork's background node/line web — near-black at low alpha on a light page. */
+  --hero-net-line: rgba(10, 10, 10, 0.06);
+  --hero-net-node: rgba(10, 10, 10, 0.12);
+}
+
+.dark {
+  --bg: #0A0A0A;
+  --bg-subtle: #171717;
+  --bg-translucent: rgba(10, 10, 10, 0.55);
+  --surface: #141416;
+  --border: #27272A;
+  --border-translucent: rgba(255, 255, 255, 0.08);
+  --text: #F5F5F5;
+  --text-tertiary: #71717A;
+  --muted: #A1A1AA;
+  /* Same hue and saturation as the light-mode navy (~223°, 100%), lightness raised from ~20% to
+     ~68% — otherwise-invisible navy-on-near-black becomes a legible bright "Arc blue" instead. Used
+     as the base for the tint washes below too, for the same reason. */
+  --accent: #5C8AFF;
+  --accent-tint: rgba(92, 138, 255, 0.16);
+  --accent-tint-vivid: rgba(92, 138, 255, 0.3);
+  --input-focus-shadow: rgba(92, 138, 255, 0.25);
+  /* Lighter than --bg/--bg-subtle on purpose — a skeleton block has to read as "loading", not blend
+     into the page the way a hairline border is supposed to. */
+  --skeleton: #2A2A2E;
+  /* Same brightened navy as --accent — gradient TEXT (header wordmark, "Your heirs.") has no fill
+     behind it for contrast, so it needs the same fix as COLOR_ACCENT. Only the navy stop moves; the
+     wine end stays put in both. */
+  --gradient-text: linear-gradient(135deg, #5C8AFF 0%, #73112C 100%);
+  --gradient-text-vivid: linear-gradient(135deg, #5C8AFF 0%, #8E0C2F 100%);
+
+  /* Same reasoning as --accent-tint: the light-theme _BG washes are near-white pastels that would
+     look broken on a dark page, so dark mode uses a translucent wash of a brightened foreground
+     color instead of a literal near-white hex. */
+  --success: #4ADE80;
+  --success-bg: rgba(74, 222, 128, 0.12);
+  --success-border: rgba(74, 222, 128, 0.35);
+  --warning: #FBBF24;
+  --warning-bg: rgba(251, 191, 36, 0.12);
+  --warning-border: rgba(251, 191, 36, 0.35);
+  --danger: #F87171;
+  --danger-bg: rgba(248, 113, 113, 0.12);
+  --danger-border: rgba(248, 113, 113, 0.35);
+
+  /* Inverted: light hairlines/dots on a dark page instead of dark ones on light. */
+  --hero-net-line: rgba(255, 255, 255, 0.08);
+  --hero-net-node: rgba(255, 255, 255, 0.16);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -18,6 +91,8 @@ body {
   color: var(--text);
   font-family: 'Inter', sans-serif;
   min-height: 100vh;
+  /* Only the colors themselves animate — no motion, just avoids a harsh snap when toggling theme. */
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 input, select, textarea {
@@ -29,15 +104,17 @@ input, select, textarea {
   font-size: 14px;
   width: 100%;
   outline: none;
-  transition: border-color 0.2s;
+  /* The border tone and the soft ring both ease in/out instead of snapping on focus. */
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 input:focus, select:focus {
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--input-focus-shadow);
 }
 
 input::placeholder {
-  color: #9CA3AF;
+  color: var(--text-tertiary);
 }
 
 button {

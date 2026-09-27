@@ -1,8 +1,9 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { useAccount, useReadContract, useSwitchChain } from 'wagmi'
 import Home from './page'
 import { ARC_TESTNET } from '@/lib/contract'
+import { ThemeProvider } from './hooks/useTheme'
 
 vi.mock('wagmi', () => ({
   useAccount: vi.fn(),
@@ -33,6 +34,15 @@ describe('Home header', () => {
     const rightGroup = howItWorksButton.parentElement
     const header = rightGroup?.parentElement
     expect(header).toHaveStyle({ flexWrap: 'wrap' })
+  })
+
+  it('gives the "How it works" toggle a visible keyboard focus ring', () => {
+    mockUseAccount.mockReturnValue({ address: undefined, isConnected: false } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+
+    render(<Home />)
+
+    expect(screen.getByRole('button', { name: 'How it works' })).toHaveClass('ui-press')
   })
 
   it('shows the Heirloom logo image next to the wordmark in the header', () => {
@@ -118,5 +128,190 @@ describe('Wrong network handling (connect-time chain enforcement)', () => {
 
     expect(screen.queryByTestId('wrong-network-banner')).not.toBeInTheDocument()
     expect(switchChain).not.toHaveBeenCalled()
+  })
+})
+
+describe('Connected screens: tabs and content transitions', () => {
+  function renderConnected() {
+    mockUseAccount.mockReturnValue({ address: '0x1111111111111111111111111111111111111111', isConnected: true, chainId: ARC_TESTNET.id } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+    mockUseSwitchChain.mockReturnValue({ switchChain: vi.fn(), status: 'idle' } as any)
+    return render(<Home />)
+  }
+
+  it('labels the tabs with SVG icons and plain text, not emoji, and gives them press feedback', () => {
+    renderConnected()
+
+    for (const name of ['My Vault', 'Claim']) {
+      const tab = screen.getByRole('button', { name })
+      expect(tab.querySelector('svg')).not.toBeNull()
+      expect(tab).toHaveClass('ui-press')
+    }
+    expect(document.body.textContent).not.toMatch(/[🔐🧬]/u)
+  })
+
+  it('switches between the owner screen and the claim screen, mounting the new card fresh (which is what triggers its fade-in)', () => {
+    renderConnected()
+
+    // Owner tab (no vault yet): the create-vault card is showing.
+    expect(screen.getByText('Set up your inheritance vault')).toBeInTheDocument()
+    expect(screen.queryByText('For heirs')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Claim' }))
+    const claimCard = screen.getByText('For heirs').closest('.ui-card')
+    expect(claimCard).toHaveClass('ui-enter')
+    expect(screen.queryByText('Set up your inheritance vault')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'My Vault' }))
+    expect(screen.getByText('Set up your inheritance vault').closest('.ui-card')).toHaveClass('ui-enter')
+    expect(screen.queryByText('For heirs')).not.toBeInTheDocument()
+  })
+
+  it('marks the active tab with the Arc gradient and leaves the other one plain', () => {
+    renderConnected()
+
+    expect(screen.getByRole('button', { name: 'My Vault' }).style.background).toContain('linear-gradient')
+    expect(screen.getByRole('button', { name: 'Claim' }).style.background).not.toContain('linear-gradient')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Claim' }))
+    expect(screen.getByRole('button', { name: 'Claim' }).style.background).toContain('linear-gradient')
+    expect(screen.getByRole('button', { name: 'My Vault' }).style.background).not.toContain('linear-gradient')
+  })
+
+  it('shows a neutral skeleton — never the "create a vault" form — while it is still finding out whether this wallet already has a vault', () => {
+    // Regression: hasVault was derived from `data` alone, so while the read was loading (data
+    // undefined) it fell through to the "no vault" branch and flashed the CreateVault form at every
+    // existing-vault owner, for as long as the read took to resolve.
+    mockUseAccount.mockReturnValue({ address: '0x1111111111111111111111111111111111111111', isConnected: true, chainId: ARC_TESTNET.id } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined, isLoading: true } as any)
+    mockUseSwitchChain.mockReturnValue({ switchChain: vi.fn(), status: 'idle' } as any)
+
+    render(<Home />)
+
+    expect(screen.getByTestId('vault-status-skeleton')).toBeInTheDocument()
+    expect(screen.queryByText('Set up your inheritance vault')).not.toBeInTheDocument()
+    expect(screen.queryByText('Your Vault')).not.toBeInTheDocument()
+  })
+})
+
+describe('Verified contract badge', () => {
+  it('shows a "Verified on Arcscan" badge in the footer, linking to the contract\'s verified code, in a new tab', () => {
+    mockUseAccount.mockReturnValue({ address: undefined, isConnected: false } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+
+    render(<Home />)
+
+    const badges = screen.getAllByTestId('verified-contract-badge')
+    expect(badges.length).toBeGreaterThan(0)
+    for (const badge of badges) {
+      expect(badge).toHaveAttribute(
+        'href',
+        'https://testnet.arcscan.app/address/0xdb7875DBfDe3A5C4763C11eF15f972C26E3D8818?tab=contract',
+      )
+      expect(badge).toHaveAttribute('target', '_blank')
+      expect(badge).toHaveAttribute('rel', expect.stringContaining('noopener'))
+    }
+  })
+
+  it('shows the badge on the "Do I need to trust Heirloom?" FAQ answer as well as the footer, while disconnected', () => {
+    mockUseAccount.mockReturnValue({ address: undefined, isConnected: false } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+
+    render(<Home />)
+
+    // One in the FAQ answer, one in the footer.
+    expect(screen.getAllByTestId('verified-contract-badge')).toHaveLength(2)
+  })
+
+  it('still shows the footer badge once connected (the FAQ itself is landing-page-only)', () => {
+    mockUseAccount.mockReturnValue({ address: '0x1111111111111111111111111111111111111111', isConnected: true, chainId: ARC_TESTNET.id } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+    mockUseSwitchChain.mockReturnValue({ switchChain: vi.fn(), status: 'idle' } as any)
+
+    render(<Home />)
+
+    expect(screen.getAllByTestId('verified-contract-badge')).toHaveLength(1)
+  })
+})
+
+describe('Footer links', () => {
+  it('links to both the frontend repo and the contract repo, each in a new tab', () => {
+    mockUseAccount.mockReturnValue({ address: undefined, isConnected: false } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+
+    render(<Home />)
+
+    const frontend = screen.getByRole('link', { name: 'Frontend ↗' })
+    expect(frontend).toHaveAttribute('href', 'https://github.com/filipelclima/arcinherit-app')
+    expect(frontend).toHaveAttribute('target', '_blank')
+
+    const contract = screen.getByRole('link', { name: 'Contract ↗' })
+    expect(contract).toHaveAttribute('href', 'https://github.com/filipelclima/ArcInherit')
+    expect(contract).toHaveAttribute('target', '_blank')
+  })
+})
+
+describe('FAQ scroll reveal', () => {
+  it('marks the "Common questions" card for scroll-reveal', () => {
+    mockUseAccount.mockReturnValue({ address: undefined, isConnected: false } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+
+    render(<Home />)
+
+    const faqCard = screen.getByText('Common questions').closest('div')!.parentElement!
+    expect(faqCard).toHaveClass('scroll-reveal')
+  })
+})
+
+describe('Theme toggle', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    document.documentElement.classList.remove('dark')
+    vi.stubGlobal('matchMedia', vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    localStorage.clear()
+    document.documentElement.classList.remove('dark')
+  })
+
+  function renderDisconnected() {
+    mockUseAccount.mockReturnValue({ address: undefined, isConnected: false } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+    return render(<ThemeProvider><Home /></ThemeProvider>)
+  }
+
+  it('shows a sun/moon toggle in the header, next to "How it works" and "Connect Wallet"', () => {
+    renderDisconnected()
+
+    const toggle = screen.getByTestId('theme-toggle')
+    expect(toggle).toBeInTheDocument()
+    expect(toggle.querySelector('svg')).not.toBeNull()
+
+    const header = screen.getByRole('button', { name: 'How it works' }).parentElement
+    expect(header?.contains(toggle)).toBe(true)
+  })
+
+  it('switches the app to dark mode when clicked, and back to light on a second click', () => {
+    renderDisconnected()
+
+    const toggle = screen.getByTestId('theme-toggle')
+    expect(toggle).toHaveAttribute('aria-label', 'Switch to dark mode')
+    expect(document.documentElement.classList.contains('dark')).toBe(false)
+
+    fireEvent.click(toggle)
+    expect(document.documentElement.classList.contains('dark')).toBe(true)
+    expect(toggle).toHaveAttribute('aria-label', 'Switch to light mode')
+    expect(localStorage.getItem('heirloom-theme')).toBe('dark')
+
+    fireEvent.click(toggle)
+    expect(document.documentElement.classList.contains('dark')).toBe(false)
+    expect(toggle).toHaveAttribute('aria-label', 'Switch to dark mode')
   })
 })

@@ -1,10 +1,34 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
+import { useQueryClient } from '@tanstack/react-query'
 import { ARC_TESTNET, CONTRACT_ADDRESS, ABI, USDC_ADDRESS, ERC20_ABI } from '@/lib/contract'
 import { parseUnits, formatUnits } from 'viem'
-import { ARC_GRADIENT, COLOR_ACCENT, COLOR_BG, COLOR_BG_SUBTLE, COLOR_BORDER, COLOR_DANGER, COLOR_DANGER_BG, COLOR_DANGER_BORDER, COLOR_SUCCESS, COLOR_SUCCESS_BG, COLOR_SUCCESS_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY, COLOR_TEXT_TERTIARY } from '@/lib/theme'
+import { COLOR_ACCENT, COLOR_SUCCESS } from '@/lib/theme'
 import { useIsWrongNetwork } from '../hooks/useEnsureArcNetwork'
+import { CheckCircleIcon, CoinsIcon } from './icons'
+import { actionButton, Card, CardHeader, CardHeaderSkeleton, FIELD_GAP, fieldLabelStyle, SECTION_GAP, Skeleton, StatusMessage } from './ui'
+
+// Same card, header skeleton, a token-address field, an amount field, and the two step buttons.
+function DepositSkeleton() {
+  return (
+    <Card data-testid="deposit-skeleton">
+      <CardHeaderSkeleton titleWidth={130} />
+      <div style={{ marginBottom: FIELD_GAP }}>
+        <Skeleton width={90} height={10} style={{ marginBottom: 6 }} />
+        <Skeleton width="100%" height={38} radius={8} />
+      </div>
+      <div style={{ marginBottom: SECTION_GAP }}>
+        <Skeleton width={60} height={10} style={{ marginBottom: 6 }} />
+        <Skeleton width="100%" height={38} radius={8} />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <Skeleton width="100%" height={44} radius={8} />
+        <Skeleton width="100%" height={44} radius={8} />
+      </div>
+    </Card>
+  )
+}
 
 export function Deposit() {
   const { address } = useAccount()
@@ -13,7 +37,7 @@ export function Deposit() {
   const [tokenAddress, setTokenAddress] = useState<string>(USDC_ADDRESS)
   const [error, setError] = useState('')
 
-  const { data: vault } = useReadContract({
+  const { data: vault, isLoading } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: ABI,
     functionName: 'getVault',
@@ -49,13 +73,24 @@ export function Deposit() {
     query: { enabled: !!address },
   })
 
+  const queryClient = useQueryClient()
   const { writeContract, data: hash, isPending } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
 
   useEffect(() => {
-    if (isSuccess) refetchAllowance()
-  }, [isSuccess, refetchAllowance])
+    if (!isSuccess) return
+    refetchAllowance()
+    // VaultStatus (a sibling component) reads the vault balance and this form reads the wallet
+    // balance; refresh both so a finished deposit shows up without a page reload. (An approve tx
+    // also lands here — the extra refetch is harmless, the values just don't change.)
+    queryClient.invalidateQueries({
+      predicate: ({ queryKey }) =>
+        queryKey[0] === 'readContract' &&
+        ['getBalances', 'balanceOf'].includes((queryKey[1] as { functionName?: string })?.functionName ?? ''),
+    })
+  }, [isSuccess, refetchAllowance, queryClient])
 
+  if (isLoading) return <DepositSkeleton />
   if (!vault || !vault[3]) return null
 
   const dec = decimals ?? 6
@@ -91,22 +126,27 @@ export function Deposit() {
   }
 
   return (
-    <div style={{ background: COLOR_BG, border: `1px solid ${COLOR_BORDER}`, borderRadius: 12, padding: '1.5rem', marginBottom: '1.5rem' }}>
-      <div style={{ fontSize: 16, fontWeight: 700, color: COLOR_TEXT_PRIMARY, marginBottom: '1.25rem' }}>Deposit Tokens</div>
+    <Card>
+      <CardHeader icon={<CoinsIcon size={18} />} title="Deposit Tokens" />
 
-      <div style={{ marginBottom: 12 }}>
-        <label style={{ fontSize: 12, color: COLOR_TEXT_SECONDARY, display: 'block', marginBottom: 6 }}>Token address</label>
+      <div style={{ marginBottom: FIELD_GAP }}>
+        <label style={fieldLabelStyle}>Token address</label>
         <input
           value={tokenAddress}
           onChange={e => setTokenAddress(e.target.value)}
           placeholder="0x... token contract address"
         />
-        {symbol && <div style={{ fontSize: 11, color: COLOR_SUCCESS, marginTop: 4 }}>Token: {symbol}</div>}
+        {symbol && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: COLOR_SUCCESS, marginTop: 4 }}>
+            <CheckCircleIcon size={12} color={COLOR_SUCCESS} />
+            <span>Token: {symbol}</span>
+          </div>
+        )}
       </div>
 
-      <div style={{ marginBottom: '1.25rem' }}>
+      <div style={{ marginBottom: SECTION_GAP }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-          <label style={{ fontSize: 12, color: COLOR_TEXT_SECONDARY }}>Amount</label>
+          <label style={{ ...fieldLabelStyle, marginBottom: 0 }}>Amount</label>
           {balance !== undefined && (
             <span
               style={{ fontSize: 12, color: COLOR_ACCENT, cursor: 'pointer' }}
@@ -125,33 +165,31 @@ export function Deposit() {
       </div>
 
       {error && (
-        <div style={{ background: COLOR_DANGER_BG, border: `1px solid ${COLOR_DANGER_BORDER}`, borderRadius: 8, padding: '10px 14px', fontSize: 13, color: COLOR_DANGER, marginBottom: '1rem' }}>
-          {error}
-        </div>
+        <StatusMessage variant="error" style={{ marginBottom: '1rem' }}>{error}</StatusMessage>
       )}
 
       {isSuccess && (
-        <div style={{ background: COLOR_SUCCESS_BG, border: `1px solid ${COLOR_SUCCESS_BORDER}`, borderRadius: 8, padding: '10px 14px', fontSize: 13, color: COLOR_SUCCESS, marginBottom: '1rem' }}>
+        <StatusMessage variant="success" style={{ marginBottom: '1rem' }}>
           {hasAllowance ? 'Deposit successful' : 'Approval successful — now deposit'}
-        </div>
+        </StatusMessage>
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <button
+          {...actionButton(!hasAllowance)}
           onClick={handleApprove}
           disabled={isPending || isConfirming || hasAllowance || isWrongNetwork}
-          style={{ background: hasAllowance ? COLOR_BG_SUBTLE : ARC_GRADIENT, border: hasAllowance ? `1px solid ${COLOR_BORDER}` : 'none', color: hasAllowance ? COLOR_TEXT_TERTIARY : '#fff', padding: '12px', fontWeight: 600, borderRadius: 8 }}
         >
           {hasAllowance ? 'Approved' : isPending ? 'Confirm...' : '1. Approve'}
         </button>
         <button
+          {...actionButton(hasAllowance)}
           onClick={handleDeposit}
           disabled={isPending || isConfirming || !hasAllowance || isWrongNetwork}
-          style={{ background: !hasAllowance ? COLOR_BG_SUBTLE : ARC_GRADIENT, border: !hasAllowance ? `1px solid ${COLOR_BORDER}` : 'none', color: !hasAllowance ? COLOR_TEXT_TERTIARY : '#fff', padding: '12px', fontWeight: 600, borderRadius: 8 }}
         >
           {isPending ? 'Confirm...' : isConfirming ? 'Depositing...' : '2. Deposit'}
         </button>
       </div>
-    </div>
+    </Card>
   )
 }

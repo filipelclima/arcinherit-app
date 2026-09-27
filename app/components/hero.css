@@ -1,0 +1,360 @@
+/* Hero visuals: card grids, the animated "vault -> heir" scene, and the background network.
+
+   Motion is strictly opt-in. Every rule in the base sections below describes the STATIC state (what
+   someone with prefers-reduced-motion sees: timer bar half full, no token, no pulsing). All
+   `animation` declarations live in the single `prefers-reduced-motion: no-preference` block at the
+   bottom of the file — hero.css.test.ts enforces that, and that keyframes only touch compositor-
+   friendly properties (opacity / transform) plus stroke-dashoffset for the flowing connector line. */
+
+/* ---- Stat / feature card rows ---------------------------------------------------------------- */
+
+/* A single column on phones and small tablets, exactly three columns from 720px up. auto-fit would
+   leave one orphaned card on its own row at in-between widths. */
+.hero-card-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 720px) {
+  .hero-card-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Light glass finish shared by the stat and feature cards, unifying them with .hero-scene-card above.
+   Lower down the page the background network has usually already faded past HeroNetwork's mask, so
+   there's rarely real texture to blur here — this is a lighter blur than the scene card's, just
+   enough to read as "glass" (subtle depth against the plain page) rather than a flat opaque card. */
+.hero-card-glass {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* ---- Layout ---------------------------------------------------------------------------------- */
+
+.hero-content {
+  position: relative;
+  padding: 3rem 1rem 4rem;
+}
+
+/* ---- Scene: vault --(token)--> heir, with the check-in timer underneath ----------------------- */
+
+.hero-scene {
+  /* One full loop. Every animated piece shares this duration so they stay in sync. */
+  --hero-cycle: 14s;
+  position: relative;
+  max-width: 560px;
+  /* Sits after the CTA now (badge/title/pitch/button come first, then this diagram), so the gap it
+     needs is above itself, not below — the stat-card grid right after it brings its own top margin. */
+  margin: 2.75rem auto 0;
+}
+
+.hero-scene-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(760px, 170%);
+  height: 360px;
+  transform: translate(-50%, -50%);
+  filter: blur(28px);
+  pointer-events: none;
+}
+
+.hero-scene-card {
+  position: relative;
+  border-radius: 16px;
+  padding: 24px 24px 18px;
+  text-align: left;
+  /* Translucent background (set inline via COLOR_BG_TRANSLUCENT) + blur: the glow and the network
+     dots/lines behind the card show through softly instead of being hidden by an opaque surface. */
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.hero-scene-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hero-node {
+  position: relative;
+  flex: none;
+}
+
+.hero-node-label {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 8px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.hero-chip {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+/* Stacked states inside one chip (lock/unlock, base/filled heir): same grid cell, cross-faded. */
+.hero-chip > span {
+  grid-area: 1 / 1;
+  display: flex;
+}
+
+.hero-lock-b {
+  opacity: 0;
+}
+
+.hero-heir-fill {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+}
+
+.hero-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hero-connector {
+  flex: 1 1 0;
+  min-width: 0;
+  height: auto;
+  aspect-ratio: 240 / 28;
+  overflow: visible;
+}
+
+.hero-flow-line,
+.hero-token {
+  opacity: 0;
+}
+
+/* SVG transforms default to the viewBox origin; center them on the shape itself. */
+.hero-token {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.hero-timer-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  /* Room for the node labels, which hang below the chips. */
+  margin-top: 40px;
+}
+
+.hero-timer-label {
+  flex: none;
+  font-size: 11px;
+}
+
+.hero-bar-track {
+  position: relative;
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.hero-bar-fill,
+.hero-bar-cover {
+  position: absolute;
+  inset: 0;
+}
+
+/* The drained part of the bar is a track-colored cover growing in from the right. Scaling the cover
+   (instead of the fill's width) keeps the navy -> wine gradient anchored and animates transform only.
+   Static state: half drained. */
+.hero-bar-cover {
+  transform: scaleX(0.5);
+  transform-origin: right center;
+}
+
+.hero-captions {
+  position: relative;
+  height: 20px;
+  margin-top: 14px;
+  font-size: 12px;
+  text-align: center;
+}
+
+.hero-cap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  opacity: 0;
+}
+
+/* Static state shows the middle beat of the story: the timer running down. */
+.hero-cap-b {
+  opacity: 1;
+}
+
+@media (max-width: 480px) {
+  /* Keeps the CTA reachable without much scrolling on a 375x812 phone — the scene now sits below
+     it, so this only has to make room for the badge/title/pitch/button, not the diagram too. */
+  .hero-content {
+    padding: 2.25rem 1rem 3rem;
+  }
+
+  .hero-scene {
+    margin-top: 20px;
+  }
+
+  .hero-captions {
+    margin-top: 10px;
+  }
+
+  .hero-scene-card {
+    padding: 18px 16px 14px;
+  }
+
+  .hero-scene-row {
+    gap: 8px;
+  }
+
+  .hero-chip {
+    width: 48px;
+    height: 48px;
+  }
+
+  .hero-timer-row {
+    margin-top: 34px;
+  }
+}
+
+/* ---- Background network ---------------------------------------------------------------------- */
+
+/* Static state: pulse halos are invisible, so the network is just still dots and hairlines. */
+.hero-net-pulse {
+  opacity: 0;
+}
+
+/* ---- Keyframes -------------------------------------------------------------------------------
+   One 14s cycle, as percentages of --hero-cycle:
+     0-6%    owner active: bar full, vault locked
+     6-56%   no check-ins: bar drains (linear)
+     57-59%  timer hits zero: vault ring pulses, lock opens
+     58-81%  release: dashed line flows, token travels vault -> heir
+     79-93%  heir lit up (ring pulse, gradient fill)
+     93-100% bar refills, everything resets for the next loop                                     */
+
+@keyframes hero-bar-drain {
+  0%, 6% { transform: scaleX(0); animation-timing-function: linear; }
+  56% { transform: scaleX(1); }
+  93% { transform: scaleX(1); animation-timing-function: cubic-bezier(0.22, 0.8, 0.3, 1); }
+  99%, 100% { transform: scaleX(0); }
+}
+
+@keyframes hero-cap-a {
+  0%, 8% { opacity: 1; }
+  12%, 96% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes hero-cap-b {
+  0%, 10% { opacity: 0; }
+  14%, 54% { opacity: 1; }
+  58%, 100% { opacity: 0; }
+}
+
+@keyframes hero-cap-c {
+  0%, 58% { opacity: 0; }
+  62%, 91% { opacity: 1; }
+  94%, 100% { opacity: 0; }
+}
+
+@keyframes hero-lock-closed {
+  0%, 56% { opacity: 1; }
+  59%, 95% { opacity: 0; }
+  99%, 100% { opacity: 1; }
+}
+
+@keyframes hero-lock-open {
+  0%, 56% { opacity: 0; }
+  59%, 95% { opacity: 1; }
+  99%, 100% { opacity: 0; }
+}
+
+@keyframes hero-ring-vault {
+  0%, 56% { opacity: 0; transform: scale(1); }
+  57% { opacity: 0.55; transform: scale(1); animation-timing-function: ease-out; }
+  67%, 100% { opacity: 0; transform: scale(1.7); }
+}
+
+@keyframes hero-flow {
+  0%, 57% { opacity: 0; stroke-dashoffset: 0; animation-timing-function: linear; }
+  59%, 80% { opacity: 1; }
+  83%, 100% { opacity: 0; stroke-dashoffset: -96; }
+}
+
+@keyframes hero-token {
+  0%, 58% { opacity: 0; transform: translateX(0) scale(0.5); animation-timing-function: ease-out; }
+  61% { opacity: 1; transform: translateX(0) scale(1); animation-timing-function: cubic-bezier(0.45, 0, 0.35, 1); }
+  78% { opacity: 1; transform: translateX(240px) scale(1); animation-timing-function: ease-in; }
+  81%, 100% { opacity: 0; transform: translateX(240px) scale(0.4); }
+}
+
+@keyframes hero-heir-fill {
+  0%, 79% { opacity: 0; }
+  82%, 93% { opacity: 1; }
+  99%, 100% { opacity: 0; }
+}
+
+@keyframes hero-heir-bump {
+  0%, 78% { transform: scale(1); }
+  82% { transform: scale(1.1); }
+  87%, 100% { transform: scale(1); }
+}
+
+@keyframes hero-ring-heir {
+  0%, 79% { opacity: 0; transform: scale(1); }
+  80% { opacity: 0.6; transform: scale(1); animation-timing-function: ease-out; }
+  90%, 100% { opacity: 0; transform: scale(1.8); }
+}
+
+/* Network nodes pulse very faintly and only occasionally: mostly dark, one soft blink per cycle. */
+@keyframes hero-net-pulse {
+  0%, 55%, 100% { opacity: 0; }
+  78% { opacity: 0.16; }
+}
+
+/* ---- Motion (opt-in) ------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  .hero-bar-cover { animation: hero-bar-drain var(--hero-cycle) infinite; }
+
+  .hero-cap-a { animation: hero-cap-a var(--hero-cycle) infinite; }
+  .hero-cap-b { animation: hero-cap-b var(--hero-cycle) infinite; }
+  .hero-cap-c { animation: hero-cap-c var(--hero-cycle) infinite; }
+
+  .hero-lock-a { animation: hero-lock-closed var(--hero-cycle) infinite; }
+  .hero-lock-b { animation: hero-lock-open var(--hero-cycle) infinite; }
+  .hero-ring-vault { animation: hero-ring-vault var(--hero-cycle) infinite; }
+
+  .hero-flow-line { animation: hero-flow var(--hero-cycle) infinite; }
+  .hero-token { animation: hero-token var(--hero-cycle) infinite; }
+
+  .hero-heir-fill { animation: hero-heir-fill var(--hero-cycle) infinite; }
+  .hero-chip-heir { animation: hero-heir-bump var(--hero-cycle) infinite; }
+  .hero-ring-heir { animation: hero-ring-heir var(--hero-cycle) infinite; }
+
+  /* Per-node duration/delay come from inline custom properties so the nodes never blink in unison. */
+  .hero-net-pulse { animation: hero-net-pulse var(--pulse-duration, 9s) ease-in-out var(--pulse-delay, 0s) infinite; }
+}

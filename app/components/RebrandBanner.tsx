@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
-import { COLOR_ACCENT, COLOR_ACCENT_TINT, COLOR_TEXT_PRIMARY } from '@/lib/theme'
+import { COLOR_ACCENT_TINT, COLOR_BORDER, COLOR_TEXT_PRIMARY } from '@/lib/theme'
+import './ui.css'
 
 export function RebrandBanner() {
   const [dismissed, setDismissed] = useState(false)
@@ -12,7 +13,7 @@ export function RebrandBanner() {
       data-testid="rebrand-banner"
       style={{
         background: COLOR_ACCENT_TINT,
-        borderBottom: `1px solid rgba(0, 23, 103, 0.15)`,
+        borderBottom: `1px solid ${COLOR_BORDER}`,
         padding: '8px 1rem',
         display: 'flex',
         alignItems: 'center',
@@ -27,12 +28,13 @@ export function RebrandBanner() {
         This project was previously named ArcInherit and is being rebranded to Heirloom to follow Arc&apos;s brand guidelines.
       </span>
       <button
+        className="ui-focus-ring"
         onClick={() => setDismissed(true)}
         aria-label="Dismiss"
         style={{
           background: 'transparent',
           border: 'none',
-          color: COLOR_ACCENT,
+          color: COLOR_TEXT_PRIMARY,
           fontSize: 16,
           lineHeight: 1,
           padding: 0,

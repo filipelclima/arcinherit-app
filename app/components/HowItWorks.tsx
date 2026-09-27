@@ -1,57 +1,6 @@
 'use client'
 import { COLOR_ACCENT, COLOR_ACCENT_TINT, COLOR_BG, COLOR_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY } from '@/lib/theme'
-
-type IconProps = { size?: number; color?: string }
-
-function iconProps(size: number, color: string) {
-  return { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: color, strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
-}
-
-function ShieldIcon({ size = 20, color = COLOR_ACCENT }: IconProps) {
-  return (
-    <svg {...iconProps(size, color)}>
-      <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
-    </svg>
-  )
-}
-
-function CoinsIcon({ size = 20, color = COLOR_ACCENT }: IconProps) {
-  return (
-    <svg {...iconProps(size, color)}>
-      <circle cx="12" cy="12" r="8" />
-      <path d="M12 8v8M9.5 10a1.5 1.5 0 0 1 1.5-1.5h1a1.5 1.5 0 0 1 0 3h-1a1.5 1.5 0 0 0 0 3h1a1.5 1.5 0 0 0 1.5-1.5" />
-    </svg>
-  )
-}
-
-function CheckCircleIcon({ size = 20, color = COLOR_ACCENT }: IconProps) {
-  return (
-    <svg {...iconProps(size, color)}>
-      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-      <path d="m9 11 3 3L22 4" />
-    </svg>
-  )
-}
-
-function UsersIcon({ size = 20, color = COLOR_ACCENT }: IconProps) {
-  return (
-    <svg {...iconProps(size, color)}>
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  )
-}
-
-function ShieldCheckIcon({ size = 20, color = COLOR_ACCENT }: IconProps) {
-  return (
-    <svg {...iconProps(size, color)}>
-      <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  )
-}
+import { CheckCircleIcon, CoinsIcon, ShieldCheckIcon, ShieldIcon, UsersIcon } from './icons'
 
 const steps = [
   {

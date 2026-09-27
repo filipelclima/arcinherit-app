@@ -63,4 +63,60 @@ describe('CheckIn', () => {
     fireEvent.click(button)
     expect(writeContract).not.toHaveBeenCalled()
   })
+
+  it('uses the shared card header (icon chip + title) and makes the check-in button the gradient primary action', () => {
+    mockUseAccount.mockReturnValue({ address: '0x1111111111111111111111111111111111111111', isConnected: true, chainId: 5042002 } as any)
+    mockUseReadContract.mockReturnValue({ data: [0n, 0n, 0n, true, []] } as any)
+    mockUseWriteContract.mockReturnValue({ writeContract: vi.fn(), data: undefined, isPending: false } as any)
+    mockUseWaitForTransactionReceipt.mockReturnValue({ isLoading: false, isSuccess: false } as any)
+
+    render(<CheckIn />)
+
+    const title = screen.getByText('I am alive')
+    expect(title.parentElement?.querySelector('svg')).not.toBeNull()
+    expect(title.closest('.ui-card')).not.toBeNull()
+    const button = screen.getByText('Check in — I am alive')
+    expect(button).toHaveClass('ui-press')
+    expect(button.style.background).toContain('linear-gradient')
+    expect(document.body.textContent).not.toContain('✓')
+  })
+
+  it('confirms a successful check-in with the shared success message (icon included), not an ad-hoc box', () => {
+    mockUseAccount.mockReturnValue({ address: '0x1111111111111111111111111111111111111111', isConnected: true, chainId: 5042002 } as any)
+    mockUseReadContract.mockReturnValue({ data: [0n, 0n, 0n, true, []] } as any)
+    mockUseWriteContract.mockReturnValue({ writeContract: vi.fn(), data: '0xhash', isPending: false } as any)
+    mockUseWaitForTransactionReceipt.mockReturnValue({ isLoading: false, isSuccess: true } as any)
+
+    render(<CheckIn />)
+
+    const message = screen.getByRole('status')
+    expect(message).toHaveTextContent('Check-in confirmed! Your countdown has been reset.')
+    expect(message).toHaveClass('ui-enter')
+    expect(message.querySelector('svg')).not.toBeNull()
+  })
+
+  it('shows a skeleton (not a blank screen) while the vault is still loading', () => {
+    mockUseAccount.mockReturnValue({ address: '0x1111111111111111111111111111111111111111', isConnected: true, chainId: 5042002 } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined, isLoading: true } as any)
+    mockUseWriteContract.mockReturnValue({ writeContract: vi.fn(), data: undefined, isPending: false } as any)
+    mockUseWaitForTransactionReceipt.mockReturnValue({ isLoading: false, isSuccess: false } as any)
+
+    const { container } = render(<CheckIn />)
+
+    expect(screen.getByTestId('check-in-skeleton')).toBeInTheDocument()
+    expect(container).not.toBeEmptyDOMElement()
+    expect(screen.queryByText('I am alive')).not.toBeInTheDocument()
+  })
+
+  it('goes back to blank (not the skeleton) once loading finishes and there is no active vault', () => {
+    mockUseAccount.mockReturnValue({ address: '0x1111111111111111111111111111111111111111', isConnected: true, chainId: 5042002 } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined, isLoading: false } as any)
+    mockUseWriteContract.mockReturnValue({ writeContract: vi.fn(), data: undefined, isPending: false } as any)
+    mockUseWaitForTransactionReceipt.mockReturnValue({ isLoading: false, isSuccess: false } as any)
+
+    const { container } = render(<CheckIn />)
+
+    expect(screen.queryByTestId('check-in-skeleton')).not.toBeInTheDocument()
+    expect(container).toBeEmptyDOMElement()
+  })
 })
