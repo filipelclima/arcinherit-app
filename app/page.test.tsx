@@ -74,6 +74,59 @@ describe('Home header', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Hide guide' }))
     expect(screen.queryByText('Create your vault')).not.toBeInTheDocument()
   })
+
+  it('smooth-scrolls to the Hero\'s "How it works" section when the guide is opened, but not when it\'s closed again', () => {
+    mockUseAccount.mockReturnValue({ address: undefined, isConnected: false } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+    const scrollIntoView = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {})
+
+    render(<Home />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'How it works' }))
+    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' })
+    // It scrolled the Hero's own section, not some other element.
+    expect(scrollIntoView.mock.instances[0]).toHaveAttribute('id', 'how-it-works')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hide guide' }))
+    expect(scrollIntoView).toHaveBeenCalledTimes(1) // still just the one call from opening
+
+    scrollIntoView.mockRestore()
+  })
+
+  it('scrolls instantly instead of smoothly when the user prefers reduced motion', () => {
+    mockUseAccount.mockReturnValue({ address: undefined, isConnected: false } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+    const scrollIntoView = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {})
+    vi.stubGlobal('matchMedia', vi.fn().mockImplementation((query: string) => ({
+      matches: query === '(prefers-reduced-motion: reduce)',
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })))
+
+    render(<Home />)
+    fireEvent.click(screen.getByRole('button', { name: 'How it works' }))
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' })
+
+    scrollIntoView.mockRestore()
+    vi.unstubAllGlobals()
+  })
+
+  it('does not throw when opened while connected, where the Hero (and its "How it works" section) never renders', () => {
+    mockUseAccount.mockReturnValue({ address: '0x1111111111111111111111111111111111111111', isConnected: true, chainId: ARC_TESTNET.id } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+    mockUseSwitchChain.mockReturnValue({ switchChain: vi.fn(), status: 'idle' } as any)
+    const scrollIntoView = vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(() => {})
+
+    render(<Home />)
+
+    expect(() => fireEvent.click(screen.getByRole('button', { name: 'How it works' }))).not.toThrow()
+    expect(scrollIntoView).not.toHaveBeenCalled()
+
+    scrollIntoView.mockRestore()
+  })
 })
 
 describe('Wrong network handling (connect-time chain enforcement)', () => {

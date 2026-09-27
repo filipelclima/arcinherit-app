@@ -116,7 +116,17 @@ export default function Home() {
           <ThemeToggle />
           <button
             className="ui-press"
-            onClick={() => setShowHowItWorks(!showHowItWorks)}
+            onClick={() => {
+              const opening = !showHowItWorks
+              setShowHowItWorks(opening)
+              // Only scroll on open — closing the guide shouldn't also yank the viewport around.
+              // The target only exists on the disconnected landing page (Hero's "How it works"
+              // section); while connected there's nothing to scroll to, so this is a harmless no-op.
+              if (opening) {
+                const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+                document.getElementById('how-it-works')?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' })
+              }
+            }}
             style={{ background: 'transparent', border: `1px solid ${COLOR_BORDER}`, color: COLOR_TEXT_SECONDARY, padding: '6px 14px', fontSize: 13, whiteSpace: 'nowrap', borderRadius: 8 }}
           >
             {showHowItWorks ? 'Hide guide' : 'How it works'}

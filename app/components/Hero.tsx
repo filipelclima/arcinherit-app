@@ -92,8 +92,9 @@ export function Hero() {
 
         {/* Feature cards: a short teaser of "How it works", not a replacement for it or the FAQ.
             The generous top margin (vs. the tight 20px between kicker and cards) is what makes the stat
-            cards above and this group read as two separate groups instead of one continuous stack. */}
-        <div style={{ maxWidth: 960, margin: 'clamp(3rem, 7vw, 4.5rem) auto 0' }}>
+            cards above and this group read as two separate groups instead of one continuous stack.
+            id is the scroll target for the header's "How it works" button (see app/page.tsx). */}
+        <div id="how-it-works" style={{ maxWidth: 960, margin: 'clamp(3rem, 7vw, 4.5rem) auto 0' }}>
           <div
             data-testid="hero-features-kicker"
             style={{
