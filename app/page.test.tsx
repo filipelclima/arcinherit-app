@@ -1,8 +1,9 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { useAccount, useReadContract, useSwitchChain } from 'wagmi'
 import Home from './page'
 import { ARC_TESTNET } from '@/lib/contract'
+import { ThemeProvider } from './hooks/useTheme'
 
 vi.mock('wagmi', () => ({
   useAccount: vi.fn(),
@@ -259,5 +260,58 @@ describe('FAQ scroll reveal', () => {
 
     const faqCard = screen.getByText('Common questions').closest('div')!.parentElement!
     expect(faqCard).toHaveClass('scroll-reveal')
+  })
+})
+
+describe('Theme toggle', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    document.documentElement.classList.remove('dark')
+    vi.stubGlobal('matchMedia', vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    localStorage.clear()
+    document.documentElement.classList.remove('dark')
+  })
+
+  function renderDisconnected() {
+    mockUseAccount.mockReturnValue({ address: undefined, isConnected: false } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+    return render(<ThemeProvider><Home /></ThemeProvider>)
+  }
+
+  it('shows a sun/moon toggle in the header, next to "How it works" and "Connect Wallet"', () => {
+    renderDisconnected()
+
+    const toggle = screen.getByTestId('theme-toggle')
+    expect(toggle).toBeInTheDocument()
+    expect(toggle.querySelector('svg')).not.toBeNull()
+
+    const header = screen.getByRole('button', { name: 'How it works' }).parentElement
+    expect(header?.contains(toggle)).toBe(true)
+  })
+
+  it('switches the app to dark mode when clicked, and back to light on a second click', () => {
+    renderDisconnected()
+
+    const toggle = screen.getByTestId('theme-toggle')
+    expect(toggle).toHaveAttribute('aria-label', 'Switch to dark mode')
+    expect(document.documentElement.classList.contains('dark')).toBe(false)
+
+    fireEvent.click(toggle)
+    expect(document.documentElement.classList.contains('dark')).toBe(true)
+    expect(toggle).toHaveAttribute('aria-label', 'Switch to light mode')
+    expect(localStorage.getItem('heirloom-theme')).toBe('dark')
+
+    fireEvent.click(toggle)
+    expect(document.documentElement.classList.contains('dark')).toBe(false)
+    expect(toggle).toHaveAttribute('aria-label', 'Switch to dark mode')
   })
 })

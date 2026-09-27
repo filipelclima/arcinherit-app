@@ -3,10 +3,11 @@ import { COLOR_ACCENT } from '@/lib/theme'
 
 // A very faint web of nodes joined by hairlines, behind the whole Hero. Deliberately close to
 // invisible: it should read as a "blockchain-ish" depth cue, never compete with the animated scene
-// or the cards. Neutral near-black (same as COLOR_TEXT_PRIMARY) at low alpha, with the navy accent
-// only on the rare pulse.
-const LINE_COLOR = 'rgba(10, 10, 10, 0.06)'
-const NODE_COLOR = 'rgba(10, 10, 10, 0.12)'
+// or the cards. Near-black at low alpha on a light page, near-white at low alpha on a dark one (see
+// --hero-net-line/--hero-net-node in globals.css) — a flat near-black would vanish on a dark
+// background, so this pair is theme-dependent even though most of the app's grays aren't.
+const LINE_COLOR = 'var(--hero-net-line)'
+const NODE_COLOR = 'var(--hero-net-node)'
 const FADE_MASK = 'radial-gradient(ellipse 90% 85% at 50% 40%, #000 30%, transparent 100%)'
 
 const COLS = 6
@@ -82,7 +83,9 @@ export function HeroNetwork() {
       {/* No viewBox on purpose: percentage coordinates stretch the web to whatever height the Hero
           has (short on desktop, very tall on phones) while circles stay round. */}
       <svg width="100%" height="100%" style={{ display: 'block' }}>
-        <g stroke={LINE_COLOR} strokeWidth={1}>
+        {/* stroke/fill go through style — var() resolution in a bare presentation attribute is
+            inconsistent across browsers but guaranteed inside style. */}
+        <g style={{ stroke: LINE_COLOR }} strokeWidth={1}>
           {network.edges.map(([a, b]) => (
             <line
               key={`${a}-${b}`}
@@ -91,12 +94,12 @@ export function HeroNetwork() {
             />
           ))}
         </g>
-        <g fill={NODE_COLOR}>
+        <g style={{ fill: NODE_COLOR }}>
           {network.nodes.map((n, i) => (
             <circle key={i} cx={`${n.x}%`} cy={`${n.y}%`} r={2} />
           ))}
         </g>
-        <g fill={COLOR_ACCENT}>
+        <g style={{ fill: COLOR_ACCENT }}>
           {network.pulses.map((p, i) => (
             <circle
               key={i}

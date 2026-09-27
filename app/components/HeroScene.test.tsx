@@ -62,9 +62,10 @@ describe('HeroScene', () => {
   it('gives the card a translucent background and border (not opaque), so the glow and the network behind it show through', () => {
     render(<HeroScene />)
 
+    // COLOR_BG_TRANSLUCENT/COLOR_BORDER_TRANSLUCENT are CSS vars (theme-dependent, see
+    // --bg-translucent/--border-translucent in globals.css) — not literal rgba() anymore.
     const card = screen.getByTestId('hero-scene-card')
-    expect(card.style.background).toMatch(/^rgba\(255, 255, 255, 0(\.\d+)?\)$/)
-    expect(parseFloat(card.style.background.match(/[\d.]+\)$/)![0])).toBeLessThan(1)
-    expect(card.style.border).toMatch(/^1px solid rgba\(229, 231, 235, 0(\.\d+)?\)$/)
+    expect(card.style.background).toBe('var(--bg-translucent)')
+    expect(card.style.border).toBe('1px solid var(--border-translucent)')
   })
 })

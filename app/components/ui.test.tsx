@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
-import { ARC_GRADIENT, COLOR_BORDER, COLOR_DANGER, COLOR_SUCCESS, COLOR_WARNING } from '@/lib/theme'
+import { ARC_GRADIENT, COLOR_DANGER, COLOR_SKELETON, COLOR_SUCCESS, COLOR_WARNING } from '@/lib/theme'
 import { ClockIcon, ShieldIcon } from './icons'
 import { actionButton, Card, CardHeader, CardHeaderSkeleton, FieldError, Skeleton, SkeletonChip, StatusMessage } from './ui'
 
@@ -61,9 +61,9 @@ describe('StatusMessage', () => {
       expect(box.style.padding).toBe('10px 14px')
       expect(box.style.borderRadius).toBe('8px')
     })
-    expect((screen.getByText('Broke').closest('[role]') as HTMLElement).style.color).toBe(hexToRgb(COLOR_DANGER))
-    expect((screen.getByText('Careful').closest('[role]') as HTMLElement).style.color).toBe(hexToRgb(COLOR_WARNING))
-    expect((screen.getByText('Done').closest('[role]') as HTMLElement).style.color).toBe(hexToRgb(COLOR_SUCCESS))
+    expect((screen.getByText('Broke').closest('[role]') as HTMLElement).style.color).toBe(COLOR_DANGER)
+    expect((screen.getByText('Careful').closest('[role]') as HTMLElement).style.color).toBe(COLOR_WARNING)
+    expect((screen.getByText('Done').closest('[role]') as HTMLElement).style.color).toBe(COLOR_SUCCESS)
   })
 
   it('announces errors as alerts and everything else politely', () => {
@@ -147,7 +147,7 @@ describe('Skeleton', () => {
     expect(el.style.width).toBe('90px')
     expect(el.style.height).toBe('16px')
     expect(el.style.borderRadius).toBe('8px')
-    expect(el.style.background).toBe(hexToRgb(COLOR_BORDER))
+    expect(el.style.background).toBe(COLOR_SKELETON)
   })
 
   it('defaults to a small text-line size when no dimensions are given', () => {
@@ -187,9 +187,3 @@ describe('CardHeaderSkeleton', () => {
     expect(document.querySelectorAll('.ui-skeleton')).toHaveLength(3) // + the right-side chip
   })
 })
-
-// jsdom normalises inline colors to rgb(); the tokens are hex.
-function hexToRgb(hex: string): string {
-  const n = parseInt(hex.slice(1), 16)
-  return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`
-}

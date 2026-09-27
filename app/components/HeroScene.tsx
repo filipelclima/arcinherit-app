@@ -41,19 +41,23 @@ export function HeroScene() {
             preserveAspectRatio="xMidYMid meet"
             aria-hidden="true"
           >
+            {/* COLOR_ACCENT and COLOR_BORDER are CSS vars (theme-dependent) — stopColor/stroke go
+                through style for those, since var() resolution in a bare presentation attribute is
+                inconsistent across browsers but guaranteed inside style. COLOR_ARC_WINE is invariant
+                brand hex, so a plain stopColor attribute is fine for it. */}
             <defs>
               <linearGradient id="hero-flow-gradient" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={CONNECTOR_WIDTH} y2="0">
-                <stop offset="0" stopColor={COLOR_ACCENT} />
+                <stop offset="0" style={{ stopColor: COLOR_ACCENT }} />
                 <stop offset="1" stopColor={COLOR_ARC_WINE} />
               </linearGradient>
               <linearGradient id="hero-token-gradient" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0" stopColor={COLOR_ACCENT} />
+                <stop offset="0" style={{ stopColor: COLOR_ACCENT }} />
                 <stop offset="1" stopColor={COLOR_ARC_WINE} />
               </linearGradient>
             </defs>
             <line
               x1="0" y1={CONNECTOR_MID} x2={CONNECTOR_WIDTH} y2={CONNECTOR_MID}
-              stroke={COLOR_BORDER} strokeWidth="1.5" strokeLinecap="round" strokeDasharray="1 6"
+              style={{ stroke: COLOR_BORDER }} strokeWidth="1.5" strokeLinecap="round" strokeDasharray="1 6"
             />
             <line
               className="hero-flow-line" data-testid="hero-flow-line"

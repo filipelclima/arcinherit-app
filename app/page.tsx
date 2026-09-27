@@ -14,10 +14,32 @@ import { CreateVault } from './components/CreateVault'
 import { CheckIn } from './components/CheckIn'
 import { Deposit } from './components/Deposit'
 import { ClaimInheritance } from './components/ClaimInheritance'
-import { CheckCircleIcon, LockIcon, UsersIcon } from './components/icons'
+import { CheckCircleIcon, LockIcon, MoonIcon, SunIcon, UsersIcon } from './components/icons'
 import './components/ui.css'
+import { useTheme } from './hooks/useTheme'
 import { CONTRACT_ADDRESS, ABI } from '@/lib/contract'
-import { ARC_GRADIENT, COLOR_BG, COLOR_BG_SUBTLE, COLOR_BORDER, COLOR_SUCCESS, COLOR_SUCCESS_BG, COLOR_SUCCESS_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY, COLOR_TEXT_TERTIARY } from '@/lib/theme'
+import { ARC_GRADIENT, ARC_GRADIENT_TEXT, COLOR_BG, COLOR_BG_SUBTLE, COLOR_BORDER, COLOR_SUCCESS, COLOR_SUCCESS_BG, COLOR_SUCCESS_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY, COLOR_TEXT_TERTIARY } from '@/lib/theme'
+
+// Sun/moon toggle: shows the icon for what clicking WILL do (sun = "go light" while dark, moon =
+// "go dark" while light), not the current state — the common convention for this control.
+function ThemeToggle() {
+  const { theme, toggle } = useTheme()
+  return (
+    <button
+      className="ui-press"
+      onClick={toggle}
+      data-testid="theme-toggle"
+      aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'transparent', border: `1px solid ${COLOR_BORDER}`, color: COLOR_TEXT_SECONDARY,
+        padding: 8, borderRadius: 8, flexShrink: 0,
+      }}
+    >
+      {theme === 'dark' ? <SunIcon size={16} color={COLOR_TEXT_SECONDARY} /> : <MoonIcon size={16} color={COLOR_TEXT_SECONDARY} />}
+    </button>
+  )
+}
 
 const CONTRACT_EXPLORER_URL = `https://testnet.arcscan.app/address/${CONTRACT_ADDRESS}`
 // The "Code" tab of the address page, where Arcscan (Blockscout) shows the verified source —
@@ -84,13 +106,14 @@ export default function Home() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 22, fontWeight: 700, color: COLOR_TEXT_PRIMARY, letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
             {/* eslint-disable-next-line @next/next/no-img-element -- small static header logo, next/image's optimizer isn't needed here */}
             <img src="/heirloom-icon.png" alt="" aria-hidden="true" data-testid="header-logo-icon" width={24} height={24} style={{ display: 'block' }} />
-            <span><span style={{ backgroundImage: ARC_GRADIENT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Heir</span>loom</span>
+            <span><span style={{ backgroundImage: ARC_GRADIENT_TEXT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Heir</span>loom</span>
           </div>
           <div style={{ fontSize: 11, background: COLOR_BG_SUBTLE, border: `1px solid ${COLOR_BORDER}`, color: COLOR_TEXT_SECONDARY, borderRadius: 6, padding: '2px 8px', whiteSpace: 'nowrap' }}>
             Arc Testnet
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <ThemeToggle />
           <button
             className="ui-press"
             onClick={() => setShowHowItWorks(!showHowItWorks)}

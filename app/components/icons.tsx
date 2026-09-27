@@ -7,7 +7,9 @@ import { COLOR_ACCENT } from '@/lib/theme'
 type IconProps = { size?: number; color?: string }
 
 function iconProps(size: number, color: string) {
-  return { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: color, strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
+  // `stroke` goes through `style` rather than as a plain SVG attribute — CSS var() resolution in a
+  // bare presentation attribute is inconsistent across browsers, but guaranteed inside `style`.
+  return { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', style: { stroke: color }, strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
 }
 
 export function ShieldIcon({ size = 20, color = COLOR_ACCENT }: IconProps) {
@@ -130,6 +132,23 @@ export function ShieldCheckIcon({ size = 20, color = COLOR_ACCENT }: IconProps) 
     <svg {...iconProps(size, color)}>
       <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
       <path d="m9 12 2 2 4-4" />
+    </svg>
+  )
+}
+
+export function SunIcon({ size = 20, color = COLOR_ACCENT }: IconProps) {
+  return (
+    <svg {...iconProps(size, color)}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+    </svg>
+  )
+}
+
+export function MoonIcon({ size = 20, color = COLOR_ACCENT }: IconProps) {
+  return (
+    <svg {...iconProps(size, color)}>
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
     </svg>
   )
 }

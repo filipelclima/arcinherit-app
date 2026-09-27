@@ -14,8 +14,11 @@ describe('HeroNetwork', () => {
     expect(layer).toHaveAttribute('aria-hidden', 'true')
     expect(layer).toHaveStyle({ position: 'absolute', pointerEvents: 'none' })
 
-    // 6 x 9 grid of nodes, plus plenty of lines between neighbours.
-    expect(layer.querySelectorAll('g[fill="rgba(10, 10, 10, 0.12)"] circle')).toHaveLength(54)
+    // 6 x 9 grid of nodes, plus plenty of lines between neighbours. Node/line color is a CSS var
+    // (theme-dependent — see --hero-net-node in globals.css), so find the group by its style rather
+    // than a literal color value.
+    const nodeGroup = Array.from(layer.querySelectorAll('g')).find(g => g.style.fill === 'var(--hero-net-node)')
+    expect(nodeGroup?.querySelectorAll('circle')).toHaveLength(54)
     expect(layer.querySelectorAll('line').length).toBeGreaterThan(60)
   })
 

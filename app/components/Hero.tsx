@@ -1,6 +1,6 @@
 'use client'
 import {
-  ARC_GRADIENT, ARC_GRADIENT_VIVID, COLOR_ACCENT_TINT_VIVID, COLOR_BG, COLOR_BG_TRANSLUCENT, COLOR_BORDER,
+  ARC_GRADIENT, ARC_GRADIENT_VIVID_TEXT, COLOR_ACCENT_TINT_VIVID, COLOR_BG, COLOR_BG_TRANSLUCENT, COLOR_BORDER,
   COLOR_BORDER_TRANSLUCENT, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY,
 } from '@/lib/theme'
 import { useScrollReveal } from '../hooks/useScrollReveal'
@@ -68,7 +68,7 @@ export function Hero() {
           </div>
           <div style={{ fontSize: 46, fontWeight: 800, color: COLOR_TEXT_PRIMARY, marginBottom: 16, letterSpacing: '-0.03em', lineHeight: 1.15 }}>
             Your crypto.<br />
-            <span style={{ backgroundImage: ARC_GRADIENT_VIVID, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Your heirs.</span>
+            <span style={{ backgroundImage: ARC_GRADIENT_VIVID_TEXT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Your heirs.</span>
           </div>
           <div style={{ fontSize: 16, color: COLOR_TEXT_SECONDARY, maxWidth: 500, margin: '0 auto 28px', lineHeight: 1.7 }}>
             Set up an onchain inheritance vault in minutes. If you stop checking in, your designated heirs can claim their share automatically — no lawyers, no paperwork, no middlemen.

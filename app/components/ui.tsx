@@ -1,8 +1,8 @@
 import type { ComponentProps, CSSProperties, ReactNode } from 'react'
 import {
   ARC_GRADIENT, COLOR_ACCENT, COLOR_ACCENT_TINT, COLOR_BG, COLOR_BG_SUBTLE, COLOR_BORDER, COLOR_DANGER, COLOR_DANGER_BG,
-  COLOR_DANGER_BORDER, COLOR_SUCCESS, COLOR_SUCCESS_BG, COLOR_SUCCESS_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY,
-  COLOR_TEXT_TERTIARY, COLOR_WARNING, COLOR_WARNING_BG, COLOR_WARNING_BORDER,
+  COLOR_DANGER_BORDER, COLOR_SKELETON, COLOR_SUCCESS, COLOR_SUCCESS_BG, COLOR_SUCCESS_BORDER, COLOR_TEXT_PRIMARY,
+  COLOR_TEXT_SECONDARY, COLOR_TEXT_TERTIARY, COLOR_WARNING, COLOR_WARNING_BG, COLOR_WARNING_BORDER,
 } from '@/lib/theme'
 import { AlertCircleIcon, AlertTriangleIcon, CheckCircleIcon, InfoCircleIcon } from './icons'
 import './ui.css'
@@ -149,7 +149,7 @@ export function Skeleton({ width, height = 14, radius = 6, style, ...rest }: {
     <div
       aria-hidden="true"
       className="ui-skeleton"
-      style={{ width, height, borderRadius: radius, background: COLOR_BORDER, flexShrink: 0, ...style }}
+      style={{ width, height, borderRadius: radius, background: COLOR_SKELETON, flexShrink: 0, ...style }}
       {...rest}
     />
   )

@@ -99,10 +99,10 @@ describe('Hero visual intensity', () => {
   it('gives "Your heirs." the more saturated vivid gradient, not the standard brand gradient used elsewhere', () => {
     render(<Hero />)
 
+    // ARC_GRADIENT_VIVID_TEXT is a CSS var (theme-dependent — dark mode brightens the navy stop for
+    // legibility, see --gradient-text-vivid in globals.css), not the plain ARC_GRADIENT_VIVID string.
     const heirsText = screen.getByText('Your heirs.')
-    // jsdom normalizes hex to rgb() in inline styles — #8E0C2F is rgb(142, 12, 47).
-    expect(heirsText.style.backgroundImage).toContain('rgb(142, 12, 47)')
-    expect(heirsText.style.backgroundImage).not.toContain('rgb(115, 17, 44)') // the standard #73112C wine stop
+    expect(heirsText.style.backgroundImage).toBe('var(--gradient-text-vivid)')
   })
 
   it('gives the feature-card icon chips a louder tint than the standard icon chip used elsewhere in the app', () => {
@@ -110,7 +110,8 @@ describe('Hero visual intensity', () => {
 
     const card = screen.getAllByTestId('hero-feature-card')[0]
     const chip = card.querySelector('svg')!.parentElement as HTMLElement
-    expect(chip.style.background).toBe('rgba(0, 23, 103, 0.18)')
+    // COLOR_ACCENT_TINT_VIVID is a CSS var (theme-dependent, see --accent-tint-vivid in globals.css).
+    expect(chip.style.background).toBe('var(--accent-tint-vivid)')
   })
 
   it('gives the stat and feature cards a translucent, blurred "glass" finish instead of an opaque background', () => {
@@ -118,7 +119,8 @@ describe('Hero visual intensity', () => {
 
     for (const card of [...screen.getAllByTestId('hero-stat-card'), ...screen.getAllByTestId('hero-feature-card')]) {
       expect(card).toHaveClass('hero-card-glass')
-      expect(card.style.background).toMatch(/rgba\(255, 255, 255, 0\.6\)/)
+      // COLOR_BG_TRANSLUCENT is a CSS var (theme-dependent, see --bg-translucent in globals.css).
+      expect(card.style.background).toBe('var(--bg-translucent)')
     }
   })
 })
