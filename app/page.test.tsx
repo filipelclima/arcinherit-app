@@ -192,3 +192,72 @@ describe('Connected screens: tabs and content transitions', () => {
     expect(screen.queryByText('Your Vault')).not.toBeInTheDocument()
   })
 })
+
+describe('Verified contract badge', () => {
+  it('shows a "Verified on Arcscan" badge in the footer, linking to the contract\'s verified code, in a new tab', () => {
+    mockUseAccount.mockReturnValue({ address: undefined, isConnected: false } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+
+    render(<Home />)
+
+    const badges = screen.getAllByTestId('verified-contract-badge')
+    expect(badges.length).toBeGreaterThan(0)
+    for (const badge of badges) {
+      expect(badge).toHaveAttribute(
+        'href',
+        'https://testnet.arcscan.app/address/0xdb7875DBfDe3A5C4763C11eF15f972C26E3D8818?tab=contract',
+      )
+      expect(badge).toHaveAttribute('target', '_blank')
+      expect(badge).toHaveAttribute('rel', expect.stringContaining('noopener'))
+    }
+  })
+
+  it('shows the badge on the "Do I need to trust Heirloom?" FAQ answer as well as the footer, while disconnected', () => {
+    mockUseAccount.mockReturnValue({ address: undefined, isConnected: false } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+
+    render(<Home />)
+
+    // One in the FAQ answer, one in the footer.
+    expect(screen.getAllByTestId('verified-contract-badge')).toHaveLength(2)
+  })
+
+  it('still shows the footer badge once connected (the FAQ itself is landing-page-only)', () => {
+    mockUseAccount.mockReturnValue({ address: '0x1111111111111111111111111111111111111111', isConnected: true, chainId: ARC_TESTNET.id } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+    mockUseSwitchChain.mockReturnValue({ switchChain: vi.fn(), status: 'idle' } as any)
+
+    render(<Home />)
+
+    expect(screen.getAllByTestId('verified-contract-badge')).toHaveLength(1)
+  })
+})
+
+describe('Footer links', () => {
+  it('links to both the frontend repo and the contract repo, each in a new tab', () => {
+    mockUseAccount.mockReturnValue({ address: undefined, isConnected: false } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+
+    render(<Home />)
+
+    const frontend = screen.getByRole('link', { name: 'Frontend ↗' })
+    expect(frontend).toHaveAttribute('href', 'https://github.com/filipelclima/arcinherit-app')
+    expect(frontend).toHaveAttribute('target', '_blank')
+
+    const contract = screen.getByRole('link', { name: 'Contract ↗' })
+    expect(contract).toHaveAttribute('href', 'https://github.com/filipelclima/ArcInherit')
+    expect(contract).toHaveAttribute('target', '_blank')
+  })
+})
+
+describe('FAQ scroll reveal', () => {
+  it('marks the "Common questions" card for scroll-reveal', () => {
+    mockUseAccount.mockReturnValue({ address: undefined, isConnected: false } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+
+    render(<Home />)
+
+    const faqCard = screen.getByText('Common questions').closest('div')!.parentElement!
+    expect(faqCard).toHaveClass('scroll-reveal')
+  })
+})

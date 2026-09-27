@@ -1,23 +1,52 @@
 'use client'
 import { useState } from 'react'
+import type { CSSProperties } from 'react'
 import { useAccount, useReadContract } from 'wagmi'
 import { ConnectWallet } from './components/ConnectWallet'
 import { RebrandBanner } from './components/RebrandBanner'
 import { Hero } from './components/Hero'
 import { WrongNetworkBanner } from './components/WrongNetworkBanner'
 import { useEnsureArcNetwork } from './hooks/useEnsureArcNetwork'
+import { useScrollReveal } from './hooks/useScrollReveal'
 import { HowItWorks } from './components/HowItWorks'
 import { VaultStatus, VaultStatusSkeleton } from './components/VaultStatus'
 import { CreateVault } from './components/CreateVault'
 import { CheckIn } from './components/CheckIn'
 import { Deposit } from './components/Deposit'
 import { ClaimInheritance } from './components/ClaimInheritance'
-import { LockIcon, UsersIcon } from './components/icons'
+import { CheckCircleIcon, LockIcon, UsersIcon } from './components/icons'
 import './components/ui.css'
 import { CONTRACT_ADDRESS, ABI } from '@/lib/contract'
-import { ARC_GRADIENT, COLOR_BG, COLOR_BG_SUBTLE, COLOR_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY, COLOR_TEXT_TERTIARY } from '@/lib/theme'
+import { ARC_GRADIENT, COLOR_BG, COLOR_BG_SUBTLE, COLOR_BORDER, COLOR_SUCCESS, COLOR_SUCCESS_BG, COLOR_SUCCESS_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY, COLOR_TEXT_TERTIARY } from '@/lib/theme'
 
 const CONTRACT_EXPLORER_URL = `https://testnet.arcscan.app/address/${CONTRACT_ADDRESS}`
+// The "Code" tab of the address page, where Arcscan (Blockscout) shows the verified source —
+// confirmed by navigating there manually: Blockscout uses a ?tab=contract query param, not a #code
+// hash fragment.
+const CONTRACT_CODE_URL = `${CONTRACT_EXPLORER_URL}?tab=contract`
+
+// Small trust signal: a link to the contract's verified source on the explorer. Neutral/green like
+// the "Protected" badge in VaultStatus, deliberately not the Arc gradient — that's reserved for CTAs
+// and primary emphasis, not a reassurance badge.
+function VerifiedContractBadge({ style }: { style?: CSSProperties }) {
+  return (
+    <a
+      href={CONTRACT_CODE_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      data-testid="verified-contract-badge"
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0,
+        background: COLOR_SUCCESS_BG, border: `1px solid ${COLOR_SUCCESS_BORDER}`,
+        borderRadius: 8, padding: '4px 10px', fontSize: 12, fontWeight: 600, color: COLOR_SUCCESS,
+        textDecoration: 'none', ...style,
+      }}
+    >
+      <CheckCircleIcon size={14} color={COLOR_SUCCESS} />
+      Verified on Arcscan
+    </a>
+  )
+}
 
 type Tab = 'owner' | 'heir'
 
@@ -30,6 +59,9 @@ export default function Home() {
   // only ever triggers a single wallet_switchEthereumChain prompt — see
   // app/hooks/useEnsureArcNetwork.ts.
   const { isWrongNetwork, switchToArc, isSwitching } = useEnsureArcNetwork()
+  // Only rendered below the fold on the disconnected landing page — the hook itself is safe to call
+  // unconditionally regardless of which branch actually mounts the FAQ card.
+  const faqReveal = useScrollReveal<HTMLDivElement>()
 
   const { data: vault, isLoading: isLoadingVault } = useReadContract({
     address: CONTRACT_ADDRESS,
@@ -80,7 +112,11 @@ export default function Home() {
             {showHowItWorks && <HowItWorks />}
 
             {/* FAQ */}
-            <div style={{ background: COLOR_BG, border: `1px solid ${COLOR_BORDER}`, borderRadius: 12, padding: '1.5rem', marginBottom: '2rem' }}>
+            <div
+              ref={faqReveal.ref}
+              className={`scroll-reveal${faqReveal.revealed ? ' is-revealed' : ''}`}
+              style={{ background: COLOR_BG, border: `1px solid ${COLOR_BORDER}`, borderRadius: 12, padding: '1.5rem', marginBottom: '2rem' }}
+            >
               <div style={{ fontSize: 16, fontWeight: 700, color: COLOR_TEXT_PRIMARY, marginBottom: '1.25rem' }}>Common questions</div>
               {[
                 {
@@ -101,12 +137,14 @@ export default function Home() {
                 },
                 {
                   q: 'Do I need to trust Heirloom?',
-                  a: 'No. The contract is immutable — not even the developers can access your funds or change the rules. You can read the verified contract code on Blockscout.'
+                  a: 'No. The contract is immutable — not even the developers can access your funds or change the rules. You can read the verified contract code on Blockscout.',
+                  verified: true,
                 },
               ].map((item, i) => (
                 <div key={i} style={{ marginBottom: i < 4 ? '1rem' : 0, paddingBottom: i < 4 ? '1rem' : 0, borderBottom: i < 4 ? `1px solid ${COLOR_BORDER}` : 'none' }}>
                   <div style={{ fontSize: 14, fontWeight: 600, color: COLOR_TEXT_PRIMARY, marginBottom: 6 }}>{item.q}</div>
                   <div style={{ fontSize: 13, color: COLOR_TEXT_SECONDARY, lineHeight: 1.7 }}>{item.a}</div>
+                  {item.verified && <VerifiedContractBadge style={{ marginTop: 10 }} />}
                 </div>
               ))}
             </div>
@@ -183,10 +221,16 @@ export default function Home() {
               <div style={{ fontSize: 11, color: COLOR_TEXT_TERTIARY }}>Built on Arc · Non-custodial · Immutable</div>
             </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, fontSize: 12 }}>
-            <a href="https://github.com/filipelclima/ArcInherit" target="_blank" rel="noopener noreferrer" style={{ color: COLOR_TEXT_SECONDARY }}>
-              GitHub ↗
-            </a>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, fontSize: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <a href="https://github.com/filipelclima/arcinherit-app" target="_blank" rel="noopener noreferrer" style={{ color: COLOR_TEXT_SECONDARY }}>
+                Frontend ↗
+              </a>
+              <span style={{ color: COLOR_TEXT_TERTIARY }}>·</span>
+              <a href="https://github.com/filipelclima/ArcInherit" target="_blank" rel="noopener noreferrer" style={{ color: COLOR_TEXT_SECONDARY }}>
+                Contract ↗
+              </a>
+            </div>
             <a
               href={CONTRACT_EXPLORER_URL}
               target="_blank"
@@ -195,6 +239,7 @@ export default function Home() {
             >
               {CONTRACT_ADDRESS.slice(0, 10)}...{CONTRACT_ADDRESS.slice(-6)} ↗
             </a>
+            <VerifiedContractBadge />
           </div>
         </div>
       </div>
