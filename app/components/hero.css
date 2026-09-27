@@ -22,6 +22,15 @@
   }
 }
 
+/* Light glass finish shared by the stat and feature cards, unifying them with .hero-scene-card above.
+   Lower down the page the background network has usually already faded past HeroNetwork's mask, so
+   there's rarely real texture to blur here — this is a lighter blur than the scene card's, just
+   enough to read as "glass" (subtle depth against the plain page) rather than a flat opaque card. */
+.hero-card-glass {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
 /* ---- Layout ---------------------------------------------------------------------------------- */
 
 .hero-content {

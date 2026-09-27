@@ -88,3 +88,27 @@ describe('ui.css entrance', () => {
     }
   })
 })
+
+describe('ui.css scroll reveal', () => {
+  it('hides and offsets the element only inside the no-preference block, so reduced motion never hides content', () => {
+    expect(noPreference).toHaveLength(1)
+    const block = noPreference[0].body
+    expect(rulesFor(block, '.scroll-reveal').join('')).toMatch(/opacity:\s*0/)
+    expect(rulesFor(block, '.scroll-reveal').join('')).toMatch(/transform:\s*translateY\(/)
+    expect(rulesFor(block, '.scroll-reveal').join('')).toMatch(/transition:/)
+
+    // Outside that block (reduced motion, or before hydration), .scroll-reveal has no rule at all —
+    // never a hidden state with nothing to reveal it.
+    expect(rulesFor(base, '.scroll-reveal')).toHaveLength(0)
+  })
+
+  it('reveals to full opacity and no transform once .is-revealed is added', () => {
+    const revealed = rulesFor(noPreference[0].body, '.scroll-reveal.is-revealed').join('')
+    expect(revealed).toMatch(/opacity:\s*1/)
+    expect(revealed).toMatch(/transform:\s*none/)
+  })
+
+  it('uses only a transition (no @keyframes/animation) for the reveal, so it never trips the "animation only inside no-preference" rule by using a different mechanism', () => {
+    expect(rulesFor(noPreference[0].body, '.scroll-reveal').join('')).not.toMatch(/animation/)
+  })
+})

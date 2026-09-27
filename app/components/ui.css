@@ -75,4 +75,19 @@
 @media (prefers-reduced-motion: no-preference) {
   .ui-enter { animation: ui-enter 0.28s ease-out; }
   .ui-skeleton { animation: ui-skeleton-pulse 1.6s ease-in-out infinite; }
+
+  /* Scroll reveal: hidden + offset until useScrollReveal (app/hooks/useScrollReveal.ts) adds
+     .is-revealed the first time the element intersects the viewport, then transitions to its normal
+     state. Deliberately no rule for `.scroll-reveal` outside this block: under reduced motion (or if
+     IntersectionObserver never fires) the class is inert and the element is just visible, unstyled. */
+  .scroll-reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+  }
+
+  .scroll-reveal.is-revealed {
+    opacity: 1;
+    transform: none;
+  }
 }

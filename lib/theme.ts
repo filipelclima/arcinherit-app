@@ -2,6 +2,14 @@
 // Rolling out in phases: Header + Hero (part 1), rest of the app (part 2).
 
 export const ARC_GRADIENT = 'linear-gradient(135deg, #001767 0%, #73112C 100%)'
+// A more saturated variant of the gradient above, reserved for the single boldest emphasis point on
+// the landing page (the "Your heirs." headline). Navy (#001767) is already at 100% HSL saturation in
+// the official gradient — there's no headroom to push it further — so only the wine stop moves, from
+// ~74% saturation/26% lightness to ~85%/30%, same hue (~343°), reading as a richer magenta-crimson
+// instead of a slightly muted brick red. This is NOT a replacement for ARC_GRADIENT/COLOR_ARC_WINE,
+// which stay the official brand colors used everywhere else (CTAs, tabs, progress bars, badges) —
+// using the vivid variant everywhere would dilute exactly the emphasis it's meant to create.
+export const ARC_GRADIENT_VIVID = 'linear-gradient(135deg, #001767 0%, #8E0C2F 100%)'
 // Solid stand-in for the gradient where a gradient isn't practical (1px borders, focus rings,
 // small icon strokes, highlighted inline numbers).
 export const COLOR_ACCENT = '#001767'
@@ -10,6 +18,11 @@ export const COLOR_ACCENT = '#001767'
 export const COLOR_ARC_WINE = '#73112C'
 // Low-opacity accent wash for icon chip backgrounds etc.
 export const COLOR_ACCENT_TINT = 'rgba(0, 23, 103, 0.08)'
+// A louder version of the tint above (~18% vs ~8%), reserved for the one or two spots that should
+// read as more vivid than the rest of the app (the Hero feature-card icons) — not a replacement for
+// COLOR_ACCENT_TINT, which stays as-is everywhere else (icon chips across the functional screens,
+// HeroScene, HowItWorks) so those already-reviewed screens don't shift.
+export const COLOR_ACCENT_TINT_VIVID = 'rgba(0, 23, 103, 0.18)'
 // Soft radial wash of the Arc gradient (wine core fading through navy to transparent), meant to
 // sit blurred behind a focal element (the Hero scene) as a glow — never as a flat fill.
 // closest-side: the fade reaches fully transparent exactly at the edge of the element's own box,

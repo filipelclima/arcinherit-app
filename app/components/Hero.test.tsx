@@ -94,3 +94,49 @@ describe('Hero', () => {
     expect(screen.queryByTestId('hero-dot-pattern')).not.toBeInTheDocument()
   })
 })
+
+describe('Hero visual intensity', () => {
+  it('gives "Your heirs." the more saturated vivid gradient, not the standard brand gradient used elsewhere', () => {
+    render(<Hero />)
+
+    const heirsText = screen.getByText('Your heirs.')
+    // jsdom normalizes hex to rgb() in inline styles — #8E0C2F is rgb(142, 12, 47).
+    expect(heirsText.style.backgroundImage).toContain('rgb(142, 12, 47)')
+    expect(heirsText.style.backgroundImage).not.toContain('rgb(115, 17, 44)') // the standard #73112C wine stop
+  })
+
+  it('gives the feature-card icon chips a louder tint than the standard icon chip used elsewhere in the app', () => {
+    render(<Hero />)
+
+    const card = screen.getAllByTestId('hero-feature-card')[0]
+    const chip = card.querySelector('svg')!.parentElement as HTMLElement
+    expect(chip.style.background).toBe('rgba(0, 23, 103, 0.18)')
+  })
+
+  it('gives the stat and feature cards a translucent, blurred "glass" finish instead of an opaque background', () => {
+    render(<Hero />)
+
+    for (const card of [...screen.getAllByTestId('hero-stat-card'), ...screen.getAllByTestId('hero-feature-card')]) {
+      expect(card).toHaveClass('hero-card-glass')
+      expect(card.style.background).toMatch(/rgba\(255, 255, 255, 0\.6\)/)
+    }
+  })
+})
+
+describe('Hero scroll reveal', () => {
+  it('marks each feature card for scroll-reveal (fades up once scrolled into view, not on mount)', () => {
+    render(<Hero />)
+
+    for (const card of screen.getAllByTestId('hero-feature-card')) {
+      expect(card).toHaveClass('scroll-reveal')
+    }
+  })
+
+  it('does not mark the stat cards for scroll reveal — they sit above the fold with the rest of the initial read', () => {
+    render(<Hero />)
+
+    for (const card of screen.getAllByTestId('hero-stat-card')) {
+      expect(card).not.toHaveClass('scroll-reveal')
+    }
+  })
+})

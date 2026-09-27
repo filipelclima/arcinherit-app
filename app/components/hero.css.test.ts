@@ -79,3 +79,13 @@ describe('hero.css scene card', () => {
     expect(rules).toMatch(/-webkit-backdrop-filter:\s*blur\(/)
   })
 })
+
+describe('hero.css stat/feature card glass', () => {
+  const base = removeBlocks(css, [...keyframes, ...findAtBlocks(css, 'media')])
+
+  it('blurs whatever sits behind the stat/feature cards too, with a Safari-prefixed fallback', () => {
+    const rules = rulesFor(base, '.hero-card-glass').join(' ')
+    expect(rules).toMatch(/(?<!-webkit-)backdrop-filter:\s*blur\(/)
+    expect(rules).toMatch(/-webkit-backdrop-filter:\s*blur\(/)
+  })
+})
