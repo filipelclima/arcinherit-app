@@ -3,6 +3,11 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from 'wagmi'
 import { Deposit } from './Deposit'
 
+const invalidateQueries = vi.fn()
+vi.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({ invalidateQueries }),
+}))
+
 vi.mock('wagmi', () => ({
   useAccount: vi.fn(),
   useReadContract: vi.fn(),
@@ -220,5 +225,33 @@ describe('Deposit', () => {
 
     expect(screen.queryByTestId('deposit-skeleton')).not.toBeInTheDocument()
     expect(container).toBeEmptyDOMElement()
+  })
+})
+
+describe('Deposit → vault balance refresh', () => {
+  it('invalidates the vault balance and wallet balance reads (and only those) once a transaction succeeds', () => {
+    invalidateQueries.mockClear()
+    mockUseAccount.mockReturnValue({ address: '0x1111111111111111111111111111111111111111' } as any)
+    mockUseWriteContract.mockReturnValue({ writeContract: vi.fn(), data: '0xhash', isPending: false } as any)
+    mockUseWaitForTransactionReceipt.mockReturnValue({ isLoading: false, isSuccess: false } as any)
+    mockUseReadContract.mockImplementation(((params: any) => {
+      if (params.functionName === 'getVault') return { data: [0n, 0n, 0n, true, []] }
+      if (params.functionName === 'allowance') return { data: 0n, refetch: vi.fn() }
+      return { data: undefined }
+    }) as any)
+
+    const { rerender } = render(<Deposit />)
+    expect(invalidateQueries).not.toHaveBeenCalled()
+
+    mockUseWaitForTransactionReceipt.mockReturnValue({ isLoading: false, isSuccess: true } as any)
+    rerender(<Deposit />)
+
+    expect(invalidateQueries).toHaveBeenCalledTimes(1)
+    const { predicate } = invalidateQueries.mock.calls[0][0]
+    const key = (functionName: string, root = 'readContract') => ({ queryKey: [root, { functionName }] })
+    expect(predicate(key('getBalances'))).toBe(true)
+    expect(predicate(key('balanceOf'))).toBe(true)
+    expect(predicate(key('getVault'))).toBe(false)
+    expect(predicate(key('getBalances', 'somethingElse'))).toBe(false)
   })
 })

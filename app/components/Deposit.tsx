@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
+import { useQueryClient } from '@tanstack/react-query'
 import { ARC_TESTNET, CONTRACT_ADDRESS, ABI, USDC_ADDRESS, ERC20_ABI } from '@/lib/contract'
 import { parseUnits, formatUnits } from 'viem'
 import { COLOR_ACCENT, COLOR_SUCCESS } from '@/lib/theme'
@@ -72,12 +73,22 @@ export function Deposit() {
     query: { enabled: !!address },
   })
 
+  const queryClient = useQueryClient()
   const { writeContract, data: hash, isPending } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
 
   useEffect(() => {
-    if (isSuccess) refetchAllowance()
-  }, [isSuccess, refetchAllowance])
+    if (!isSuccess) return
+    refetchAllowance()
+    // VaultStatus (a sibling component) reads the vault balance and this form reads the wallet
+    // balance; refresh both so a finished deposit shows up without a page reload. (An approve tx
+    // also lands here — the extra refetch is harmless, the values just don't change.)
+    queryClient.invalidateQueries({
+      predicate: ({ queryKey }) =>
+        queryKey[0] === 'readContract' &&
+        ['getBalances', 'balanceOf'].includes((queryKey[1] as { functionName?: string })?.functionName ?? ''),
+    })
+  }, [isSuccess, refetchAllowance, queryClient])
 
   if (isLoading) return <DepositSkeleton />
   if (!vault || !vault[3]) return null

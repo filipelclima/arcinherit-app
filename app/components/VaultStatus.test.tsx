@@ -353,3 +353,134 @@ describe('VaultStatus loading state', () => {
     expect(container).toBeEmptyDOMElement()
   })
 })
+
+describe('VaultStatus balance section', () => {
+  const OWNER = '0x1111111111111111111111111111111111111111'
+  const USDC = '0x3600000000000000000000000000000000000000'
+  const EURC = '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a'
+
+  // getBalances result + per-token symbol/decimals; `overrides` lets a test swap any read (e.g. loading).
+  function mockVault(balances: any, tokenInfo: Record<string, { symbol: string; decimals: number }> = {}, overrides: Record<string, any> = {}) {
+    mockUseAccount.mockReturnValue({ address: OWNER } as any)
+    mockUseReadContract.mockImplementation(((params: any) => {
+      if (overrides[params.functionName]) return overrides[params.functionName]
+      switch (params.functionName) {
+        case 'getVault':
+          return { data: [BigInt(TIMELOCK_DAYS * DAY), BigInt(GRACE_DAYS * DAY), 0n, true, []], isLoading: false }
+        case 'timeUntilClaim':
+          return { data: BigInt(TIMELOCK_DAYS * DAY) }
+        case 'canClaim':
+          return { data: false }
+        case 'getBalances':
+          return { data: balances, isLoading: false }
+        case 'symbol':
+          return { data: tokenInfo[params.address]?.symbol, isLoading: false }
+        case 'decimals':
+          return { data: tokenInfo[params.address]?.decimals, isLoading: false }
+        default:
+          return { data: undefined }
+      }
+    }) as any)
+  }
+
+  it('reads the balance for the connected owner via getBalances (not the contract-wide token balance)', () => {
+    mockVault([])
+    render(<VaultStatus />)
+
+    const call = mockUseReadContract.mock.calls.map(c => c[0] as any).find(p => p.functionName === 'getBalances')
+    expect(call.args).toEqual([OWNER])
+  })
+
+  it('shows the deposited amount with the token symbol, formatted with the token\'s own decimals', () => {
+    mockVault([{ token: USDC, amount: 2_000_000n }], { [USDC]: { symbol: 'USDC', decimals: 6 } })
+    render(<VaultStatus />)
+
+    expect(screen.getByText('Vault balance')).toBeInTheDocument()
+    const row = screen.getByTestId('vault-balance-row')
+    expect(row).toHaveTextContent('USDC')
+    expect(row).toHaveTextContent('2.00')
+  })
+
+  it('lists one row per token when several are deposited, each with its own decimals', () => {
+    mockVault(
+      [{ token: USDC, amount: 1_500_000n }, { token: EURC, amount: 10n ** 18n }],
+      { [USDC]: { symbol: 'USDC', decimals: 6 }, [EURC]: { symbol: 'WEIRD', decimals: 18 } },
+    )
+    render(<VaultStatus />)
+
+    const rows = screen.getAllByTestId('vault-balance-row')
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).toHaveTextContent('1.50')
+    expect(rows[1]).toHaveTextContent('WEIRD')
+    expect(rows[1]).toHaveTextContent('1.00')
+  })
+
+  it('hides tokens whose balance is zero and shows a token listed twice by the contract only once', () => {
+    mockVault(
+      [
+        { token: USDC, amount: 2_000_000n },
+        { token: EURC, amount: 0n },
+        { token: USDC.toLowerCase(), amount: 2_000_000n },
+      ],
+      { [USDC]: { symbol: 'USDC', decimals: 6 }, [USDC.toLowerCase()]: { symbol: 'USDC', decimals: 6 } },
+    )
+    render(<VaultStatus />)
+
+    expect(screen.getAllByTestId('vault-balance-row')).toHaveLength(1)
+  })
+
+  it('says so when nothing has been deposited yet', () => {
+    mockVault([])
+    render(<VaultStatus />)
+
+    expect(screen.getByText('No funds deposited yet.')).toBeInTheDocument()
+    expect(screen.queryByTestId('vault-balance-row')).not.toBeInTheDocument()
+  })
+
+  it('shows a balance skeleton (not an empty state) while getBalances is loading', () => {
+    mockVault(undefined, {}, { getBalances: { data: undefined, isLoading: true } })
+    render(<VaultStatus />)
+
+    expect(screen.getByTestId('vault-balances-skeleton')).toBeInTheDocument()
+    expect(screen.queryByText('No funds deposited yet.')).not.toBeInTheDocument()
+    // The rest of the card is already real content.
+    expect(screen.getByText('Your Vault')).toBeInTheDocument()
+  })
+
+  it('shows skeletons in the row while the token symbol/decimals are still loading, then the real values', () => {
+    mockVault(
+      [{ token: USDC, amount: 2_000_000n }],
+      {},
+      { symbol: { data: undefined, isLoading: true }, decimals: { data: undefined, isLoading: true } },
+    )
+    const { unmount } = render(<VaultStatus />)
+
+    const row = screen.getByTestId('vault-balance-row')
+    expect(row.querySelectorAll('.ui-skeleton').length).toBeGreaterThan(0)
+    expect(row).not.toHaveTextContent('2.00')
+    unmount()
+
+    mockVault([{ token: USDC, amount: 2_000_000n }], { [USDC]: { symbol: 'USDC', decimals: 6 } })
+    render(<VaultStatus />)
+    expect(screen.getByTestId('vault-balance-row').querySelectorAll('.ui-skeleton')).toHaveLength(0)
+    expect(screen.getByTestId('vault-balance-row')).toHaveTextContent('2.00')
+  })
+
+  it('never guesses decimals: an unreadable token shows its address and a dash, not a made-up amount', () => {
+    mockVault([{ token: EURC, amount: 123n }], {})
+    render(<VaultStatus />)
+
+    const row = screen.getByTestId('vault-balance-row')
+    expect(row).toHaveTextContent('0x89B5...D72a')
+    expect(row).toHaveTextContent('—')
+  })
+
+  it('includes a balance section in the whole-card loading skeleton, so nothing shifts when it resolves', () => {
+    mockUseAccount.mockReturnValue({ address: OWNER } as any)
+    mockUseReadContract.mockImplementation(((params: any) =>
+      params.functionName === 'getVault' ? { data: undefined, isLoading: true } : { data: undefined }) as any)
+    render(<VaultStatus />)
+
+    expect(screen.getByTestId('vault-status-skeleton').querySelector('[data-testid="vault-balances-skeleton"]')).not.toBeNull()
+  })
+})

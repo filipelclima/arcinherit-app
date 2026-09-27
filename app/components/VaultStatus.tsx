@@ -2,11 +2,12 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useAccount, useReadContract } from 'wagmi'
-import { CONTRACT_ADDRESS, ABI } from '@/lib/contract'
+import { CONTRACT_ADDRESS, ABI, ERC20_ABI } from '@/lib/contract'
 import { formatDuration } from '@/lib/duration'
+import { formatTokenAmount } from '@/lib/formatTokenAmount'
 import { generateInheritancePdf } from '@/lib/generateInheritancePdf'
 import { ARC_GRADIENT, COLOR_ACCENT, COLOR_ACCENT_TINT, COLOR_BG, COLOR_BG_SUBTLE, COLOR_BORDER, COLOR_DANGER, COLOR_DANGER_BG, COLOR_DANGER_BORDER, COLOR_SUCCESS, COLOR_SUCCESS_BG, COLOR_SUCCESS_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY, COLOR_WARNING } from '@/lib/theme'
-import { AlertTriangleIcon, CalendarIcon, CheckCircleIcon, ClockIcon, DownloadIcon, LockIcon, ShieldIcon, UsersIcon } from './icons'
+import { AlertTriangleIcon, CalendarIcon, CheckCircleIcon, ClockIcon, CoinsIcon, DownloadIcon, LockIcon, ShieldIcon, UsersIcon } from './icons'
 import { Card, CardHeader, CardHeaderSkeleton, SECTION_GAP, Skeleton, SkeletonChip, StatusMessage } from './ui'
 
 function formatTimeLeft(seconds: bigint): { text: string; urgent: boolean } {
@@ -67,6 +68,7 @@ export function VaultStatusSkeleton() {
           <Skeleton width="100%" height={8} radius={999} />
         </div>
         <Skeleton width="65%" height={16} />
+        <BalancesSkeleton />
       </Card>
       <Card style={{ marginBottom: 0 }}>
         <CardHeaderSkeleton titleWidth={110} />
@@ -82,6 +84,92 @@ export function VaultStatusSkeleton() {
           ))}
         </div>
       </Card>
+    </div>
+  )
+}
+
+// "Vault balance" section: one row per token with a non-zero balance held for this owner. The contract
+// is one shared vault for everyone with per-owner internal accounting, so the ERC-20 balanceOf(contract)
+// would be every user's funds together — the only correct source is getBalances(owner).
+function BalancesSkeleton() {
+  return (
+    <div style={{ marginTop: SECTION_GAP }} data-testid="vault-balances-skeleton">
+      <Skeleton width={90} height={10} style={{ marginBottom: 8 }} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: COLOR_BG_SUBTLE, border: `1px solid ${COLOR_BORDER}`, borderRadius: 8, padding: '10px 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <SkeletonChip size={28} />
+          <Skeleton width={50} height={12} />
+        </div>
+        <Skeleton width={80} height={16} />
+      </div>
+    </div>
+  )
+}
+
+function BalanceRow({ token, amount }: { token: `0x${string}`; amount: bigint }) {
+  // Symbol and decimals come from the token itself (USDC is 6 on its ERC-20 interface) — never assumed.
+  const { data: symbol, isLoading: isLoadingSymbol } = useReadContract({ address: token, abi: ERC20_ABI, functionName: 'symbol' })
+  const { data: decimals, isLoading: isLoadingDecimals } = useReadContract({ address: token, abi: ERC20_ABI, functionName: 'decimals' })
+
+  const isLoadingInfo = isLoadingSymbol || isLoadingDecimals
+  const label = symbol ?? `${token.slice(0, 6)}...${token.slice(-4)}`
+
+  return (
+    <div
+      className="ui-card-sm"
+      data-testid="vault-balance-row"
+      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, background: COLOR_BG_SUBTLE, border: `1px solid ${COLOR_BORDER}`, borderRadius: 8, padding: '10px 14px' }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+        <div style={{ width: 28, height: 28, borderRadius: '50%', background: COLOR_ACCENT_TINT, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <CoinsIcon size={14} />
+        </div>
+        {isLoadingInfo
+          ? <Skeleton width={50} height={12} />
+          : <span style={{ fontWeight: 600, fontSize: 14, color: COLOR_TEXT_PRIMARY, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>}
+      </div>
+      {isLoadingInfo
+        ? <Skeleton width={80} height={16} />
+        : <span style={{ fontWeight: 700, fontSize: 15, color: COLOR_TEXT_PRIMARY, flexShrink: 0 }}>
+            {decimals !== undefined ? formatTokenAmount(amount, decimals) : '—'}
+          </span>}
+    </div>
+  )
+}
+
+function VaultBalances({ owner }: { owner: `0x${string}` }) {
+  const { data: balances, isLoading } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: ABI,
+    functionName: 'getBalances',
+    args: [owner],
+  })
+
+  if (isLoading) return <BalancesSkeleton />
+
+  // The contract re-pushes a token into its list whenever its balance was 0 at deposit time, so the
+  // same token can appear twice (with the same amount, read from one mapping) — show it once.
+  const seen = new Set<string>()
+  const funded = (balances ?? []).filter(b => {
+    const key = b.token.toLowerCase()
+    if (b.amount === BigInt(0) || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+
+  return (
+    <div style={{ marginTop: SECTION_GAP }} data-testid="vault-balances">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: COLOR_TEXT_SECONDARY, marginBottom: 8 }}>
+        <CoinsIcon size={14} color={COLOR_TEXT_SECONDARY} />
+        <span>Vault balance</span>
+      </div>
+      {funded.length === 0 ? (
+        <div style={{ fontSize: 13, color: COLOR_TEXT_SECONDARY }}>No funds deposited yet.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {funded.map(b => <BalanceRow key={b.token} token={b.token} amount={b.amount} />)}
+        </div>
+      )}
     </div>
   )
 }
@@ -214,6 +302,8 @@ export function VaultStatus() {
         {timeInfo && !timeInfo.urgent && (
           <StatusMessage variant="success">{timeInfo.text}</StatusMessage>
         )}
+
+        <VaultBalances owner={address} />
       </Card>
 
       {/* Heirs */}
