@@ -166,6 +166,10 @@ Toggle opcional (sol/lua no header, ao lado de "How it works") — o app continu
 - **`COLOR_SKELETON`** — token novo, separado de `COLOR_BORDER`. Um border quer ser quase invisível em dark mode (hairline sutil); um skeleton precisa continuar visivelmente "carregando" — os dois puxam pra direções opostas assim que existe um tema escuro, então não dá mais pra compartilhar um valor só.
 - **Outros ajustes de tema:** `COLOR_BG_TRANSLUCENT`/`COLOR_BORDER_TRANSLUCENT` (glass da Hero) viram translúcido-escuro em vez de translúcido-branco; `COLOR_SUCCESS/WARNING/DANGER` (+ `_BG`/`_BORDER`) trocam os washes pastel quase-brancos por washes translúcidos de uma versão mais clara da própria cor (um `#F0FDF4` quase-branco ficaria "errado" colado num fundo escuro); `HeroNetwork`'s `LINE_COLOR`/`NODE_COLOR` invertem de quase-preto-translúcido pra quase-branco-translúcido.
 
+## Scroll até "How it works" (2026-09-27)
+
+O botão "How it works" do header, além de alternar o texto/visibilidade do guia (`showHowItWorks`, comportamento já existente), agora também rola a página suavemente até a seção do kicker + 3 feature cards na Hero (`id="how-it-works"` no `Hero.tsx`) — só ao **abrir**, nunca ao fechar/"Hide guide". Respeita `prefers-reduced-motion`: `scrollIntoView({ behavior: 'auto', ... })` em vez de `'smooth'` quando o usuário prefere movimento reduzido. Como a Hero só renderiza desconectado, clicar o botão já conectado (onde a seção não existe) é um no-op inofensivo via `?.`.
+
 ## Regras de trabalho
 
 1. **Sempre rodar os testes unitários existentes antes de fazer commit.**
@@ -178,6 +182,7 @@ Toggle opcional (sol/lua no header, ao lado de "How it works") — o app continu
 
 - Vitest `4.1.10` + Testing Library (`@testing-library/react`, `jest-dom`), ambiente `jsdom`.
 - Config: `vitest.config.mts` (extensão `.mts` de propósito — evita o warning do config loader nativo do Vite quando o `package.json` não é `"type": "module"`) + `vitest.setup.ts` (matchers do jest-dom + `cleanup()` explícito no `afterEach`, necessário porque o auto-cleanup do Testing Library depende de `globals: true`, que não está habilitado aqui).
+- `vitest.setup.ts` também tem polyfills globais pra duas APIs que o jsdom não implementa: `window.matchMedia` (retorna `matches: false` por padrão — testes que precisam de um valor específico, como `useTheme.test.tsx`, sobrescrevem com `vi.stubGlobal`) e `Element.prototype.scrollIntoView` (no-op). Sem isso, qualquer teste que dispare um clique/efeito que chame essas APIs quebra com `TypeError`, mesmo sem o teste ter nada a ver com tema ou scroll.
 - Testes ficam colocados junto do componente (`Componente.test.tsx` ao lado de `Componente.tsx`).
 - Hooks do wagmi (`useAccount`, `useConnect`, `useDisconnect` etc.) devem ser mockados com `vi.mock('wagmi', () => ({...}))` — ver `ConnectWallet.test.tsx` como exemplo.
 
