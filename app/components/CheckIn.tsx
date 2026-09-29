@@ -39,7 +39,7 @@ export function CheckIn() {
       <CardHeader
         icon={<CheckCircleIcon size={18} />}
         title="I am alive"
-        description="Clicking this button resets your countdown. It is an onchain transaction that costs less than $0.01 and takes a few seconds. Do this once a year (or however often you set) to keep your vault protected."
+        description="Clicking this button resets your countdown. It is an onchain transaction that costs a small amount of gas and takes a few seconds. Do this once a year (or however often you set) to keep your vault protected."
       />
       {isSuccess && (
         <StatusMessage variant="success" style={{ marginBottom: '1rem' }}>

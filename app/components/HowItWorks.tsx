@@ -19,12 +19,12 @@ const steps = [
     number: '03',
     Icon: CheckCircleIcon,
     title: 'Check in regularly',
-    description: 'Once every year (or however long you set), simply click "Check In" to confirm you are alive. This resets the countdown. It takes 5 seconds and costs less than $0.01.',
+    description: 'Once every year (or however long you set), simply click "Check In" to confirm you are alive. This resets the countdown. It takes 5 seconds and only costs a small amount of gas.',
   },
   {
     number: '04',
     Icon: UsersIcon,
-    title: 'Heirs claim automatically',
+    title: 'Heirs can claim',
     description: 'If you stop checking in, your heirs can claim their share after the countdown expires. They just need their wallet — no lawyers, no paperwork, no waiting.',
   },
 ]

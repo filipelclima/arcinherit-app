@@ -251,7 +251,7 @@ export default function Home() {
             <img src="/heirloom-icon.png" alt="" width={20} height={20} style={{ display: 'block' }} />
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: COLOR_TEXT_PRIMARY }}>Heirloom</div>
-              <div style={{ fontSize: 11, color: COLOR_TEXT_TERTIARY }}>Built on Arc · Non-custodial · Immutable</div>
+              <div style={{ fontSize: 11, color: COLOR_TEXT_TERTIARY }}>Built on Arc · Non-custodial · No admin keys</div>
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, fontSize: 12 }}>

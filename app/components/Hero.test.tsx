@@ -19,15 +19,15 @@ describe('Hero', () => {
     expect(screen.getByRole('button', { name: 'Connect Wallet' })).toBeInTheDocument()
   })
 
-  it('shows the non-custodial / immutable / fee facts as stat cards instead of a single text line', () => {
+  it('shows the non-custodial / no-admin-keys / testnet facts as stat cards instead of a single text line', () => {
     render(<Hero />)
 
     const cards = screen.getAllByTestId('hero-stat-card')
     expect(cards).toHaveLength(3)
     expect(within(cards[0]).getByText('Non-custodial')).toBeInTheDocument()
-    expect(within(cards[1]).getByText('Immutable')).toBeInTheDocument()
-    expect(within(cards[2]).getByText('<$0.01')).toBeInTheDocument()
-    expect(within(cards[2]).getByText('per transaction')).toBeInTheDocument()
+    expect(within(cards[1]).getByText('No admin keys')).toBeInTheDocument()
+    expect(within(cards[2]).getByText('Testnet')).toBeInTheDocument()
+    expect(within(cards[2]).getByText('No real funds at risk')).toBeInTheDocument()
 
     // The old tagline this replaces must be gone.
     expect(screen.queryByText(/Built on Arc · Non-custodial · Immutable/)).not.toBeInTheDocument()
@@ -40,7 +40,7 @@ describe('Hero', () => {
     expect(cards).toHaveLength(3)
     expect(within(cards[0]).getByText('Check in periodically')).toBeInTheDocument()
     expect(within(cards[1]).getByText('Add your heirs')).toBeInTheDocument()
-    expect(within(cards[2]).getByText('Automatic claim')).toBeInTheDocument()
+    expect(within(cards[2]).getByText('Heirs can claim')).toBeInTheDocument()
     cards.forEach(card => expect(card.querySelector('svg')).not.toBeNull())
   })
 

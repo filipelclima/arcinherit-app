@@ -13,6 +13,6 @@ describe('HowItWorks', () => {
     expect(screen.getByText('Create your vault')).toBeInTheDocument()
     expect(screen.getByText('Deposit your tokens')).toBeInTheDocument()
     expect(screen.getByText('Check in regularly')).toBeInTheDocument()
-    expect(screen.getByText('Heirs claim automatically')).toBeInTheDocument()
+    expect(screen.getByText('Heirs can claim')).toBeInTheDocument()
   })
 })

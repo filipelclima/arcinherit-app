@@ -13,14 +13,14 @@ import './ui.css'
 
 const stats = [
   { value: 'Non-custodial', label: 'No one else holds your funds' },
-  { value: 'Immutable', label: 'Rules can\'t be changed' },
-  { value: '<$0.01', label: 'per transaction' },
+  { value: 'No admin keys', label: 'No pause, no proxy' },
+  { value: 'Testnet', label: 'No real funds at risk' },
 ]
 
 const features = [
   { Icon: ClockIcon, title: 'Check in periodically', description: 'Confirm you\'re still active, as often as you choose' },
   { Icon: UsersIcon, title: 'Add your heirs', description: 'Assign wallet addresses and their share' },
-  { Icon: CheckCircleIcon, title: 'Automatic claim', description: 'Heirs claim directly from the contract if you go silent' },
+  { Icon: CheckCircleIcon, title: 'Heirs can claim', description: 'Heirs claim directly from the contract if you go silent' },
 ]
 
 // Same light-glass treatment as .hero-scene-card (translucent + blur), applied via the
@@ -71,7 +71,7 @@ export function Hero() {
             <span style={{ backgroundImage: ARC_GRADIENT_VIVID_TEXT, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Your heirs.</span>
           </div>
           <div style={{ fontSize: 16, color: COLOR_TEXT_SECONDARY, maxWidth: 500, margin: '0 auto 28px', lineHeight: 1.7 }}>
-            Set up an onchain inheritance vault in minutes. If you stop checking in, your designated heirs can claim their share automatically — no lawyers, no paperwork, no middlemen.
+            Set up an onchain inheritance vault in minutes. If you stop checking in, your designated heirs can claim their share straight from the contract — no lawyers, no paperwork, no middlemen.
           </div>
           <ConnectWallet size="lg" />
 
