@@ -124,7 +124,7 @@ export async function generateInheritancePdf({
 
   sectionHeading('3. What happens next')
   paragraph(
-    'The owner of this vault must "check in" periodically to confirm they\'re still active. If they miss a check-in, and the safety window afterward also passes without a check-in, the heir(s) listed above become eligible to claim their share directly from the smart contract — automatically, with no lawyers, no company, and no one else\'s approval needed.'
+    'The owner of this vault must "check in" periodically to confirm they\'re still active. If they miss a check-in, and the safety window afterward also passes without a check-in, the heir(s) listed above become eligible to claim their share directly from the smart contract, with no lawyers, no company, and no one else\'s approval needed.'
   )
 
   sectionHeading('4. How to claim, step by step')

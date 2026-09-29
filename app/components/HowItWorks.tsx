@@ -79,7 +79,7 @@ export function HowItWorks() {
             Nobody has a master key — not even us
           </div>
           <div style={{ fontSize: 13, color: COLOR_TEXT_SECONDARY, lineHeight: 1.6 }}>
-            Heirloom is an immutable smart contract. Once deployed, no one — not the developers, not Arc, not Circle — can access, freeze, or change the rules of your vault. Your funds follow the rules you set, enforced by code alone.
+            The contract has no admin functions, no pause and no upgrade proxy. No one — not the developers, not Arc — can access your funds or change your vault&apos;s rules. Only you can. Note: token issuers like Circle can still blocklist addresses at the token level.
           </div>
         </div>
       </div>
