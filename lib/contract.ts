@@ -13,7 +13,8 @@ export const ARC_TESTNET = {
   // so a wrong value here shows the wallet's own native gas balance off by 10^12.
   nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
   rpcUrls: {
-    default: { http: ['https://rpc.testnet.arc.network'] },
+    // rpc.testnet.arc.network is Arc's legacy endpoint (brownout Oct 2026, removed Oct 15, 2026).
+    default: { http: ['https://rpc.testnet.arc.io'] },
   },
   blockExplorers: {
     default: { name: 'Blockscout', url: 'https://testnet.arcscan.app' },

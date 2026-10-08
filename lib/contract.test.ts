@@ -18,3 +18,11 @@ describe('USDC_ADDRESS', () => {
     expect(USDC_ADDRESS).toBe('0x3600000000000000000000000000000000000000')
   })
 })
+
+describe('ARC_TESTNET.rpcUrls', () => {
+  it('uses the current arc.io RPC, never the legacy arc.network endpoint (removed Oct 15, 2026)', () => {
+    const urls = ARC_TESTNET.rpcUrls.default.http
+    expect(urls[0]).toBe('https://rpc.testnet.arc.io')
+    expect(urls.some((u) => u.includes('arc.network'))).toBe(false)
+  })
+})
