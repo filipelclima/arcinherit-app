@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
 import { useQueryClient } from '@tanstack/react-query'
 import { ARC_TESTNET, CONTRACT_ADDRESS, ABI, USDC_ADDRESS, ERC20_ABI } from '@/lib/contract'
@@ -74,8 +74,13 @@ export function Deposit() {
   })
 
   const queryClient = useQueryClient()
-  const { writeContract, data: hash, isPending } = useWriteContract()
+  const { writeContract, data: hash, isPending, reset: resetWrite } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
+  // Which tx is in flight (and, for a deposit, the amount shown afterwards). The success message used
+  // to be guessed from the allowance, and nothing reset after a deposit — the amount stayed filled and
+  // "2. Deposit" stayed active, so one more click deposited the same amount again.
+  const sentRef = useRef<{ action: 'approve' | 'deposit'; label: string } | null>(null)
+  const [notice, setNotice] = useState('')
 
   useEffect(() => {
     if (!isSuccess) return
@@ -88,19 +93,37 @@ export function Deposit() {
         queryKey[0] === 'readContract' &&
         ['getBalances', 'balanceOf'].includes((queryKey[1] as { functionName?: string })?.functionName ?? ''),
     })
-  }, [isSuccess, refetchAllowance, queryClient])
+
+    const sent = sentRef.current
+    sentRef.current = null
+    if (!sent) return
+    if (sent.action === 'deposit') {
+      // Start over: a new deposit needs a new amount (and a new approve if the allowance is used up).
+      setAmount('')
+      setNotice(`Deposit successful: ${sent.label} added to your vault.`)
+    } else {
+      setNotice('Approval successful — now deposit')
+    }
+    // Drop the confirmed tx so its success state can't linger and its button can't fire again.
+    resetWrite()
+  }, [isSuccess, refetchAllowance, queryClient, resetWrite])
 
   if (isLoading) return <DepositSkeleton />
   if (!vault || !vault[3]) return null
 
   const dec = decimals ?? 6
   const parsedAmount = amount ? parseUnits(amount, dec) : BigInt(0)
-  const hasAllowance = allowance !== undefined && allowance >= parsedAmount
+  const hasAmount = parsedAmount > BigInt(0)
+  // An empty amount is never "approved": 0 <= any allowance, which is what left "2. Deposit" active
+  // after a deposit cleared nothing. Deposit only enables for a real amount the allowance covers.
+  const hasAllowance = hasAmount && allowance !== undefined && allowance >= parsedAmount
 
   function handleApprove() {
     setError('')
+    setNotice('')
     if (!address) return setError('Connect your wallet first')
     if (!amount || parsedAmount <= BigInt(0)) return setError('Enter an amount')
+    sentRef.current = { action: 'approve', label: '' }
     writeContract({
       address: tokenAddress as `0x${string}`,
       abi: ERC20_ABI,
@@ -113,8 +136,10 @@ export function Deposit() {
 
   function handleDeposit() {
     setError('')
+    setNotice('')
     if (!address) return setError('Connect your wallet first')
     if (!amount || parsedAmount <= BigInt(0)) return setError('Enter an amount')
+    sentRef.current = { action: 'deposit', label: `${amount} ${symbol ?? ''}`.trim() }
     writeContract({
       address: CONTRACT_ADDRESS,
       abi: ABI,
@@ -168,9 +193,9 @@ export function Deposit() {
         <StatusMessage variant="error" style={{ marginBottom: '1rem' }}>{error}</StatusMessage>
       )}
 
-      {isSuccess && (
-        <StatusMessage variant="success" style={{ marginBottom: '1rem' }}>
-          {hasAllowance ? 'Deposit successful' : 'Approval successful — now deposit'}
+      {notice && (
+        <StatusMessage variant="success" style={{ marginBottom: '1rem' }} data-testid="deposit-notice">
+          {notice}
         </StatusMessage>
       )}
 
@@ -185,7 +210,7 @@ export function Deposit() {
         <button
           {...actionButton(hasAllowance)}
           onClick={handleDeposit}
-          disabled={isPending || isConfirming || !hasAllowance || isWrongNetwork}
+          disabled={isPending || isConfirming || !hasAmount || !hasAllowance || isWrongNetwork}
         >
           {isPending ? 'Confirm...' : isConfirming ? 'Depositing...' : '2. Deposit'}
         </button>

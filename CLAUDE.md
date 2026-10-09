@@ -190,6 +190,11 @@ O contrato v2 (`0x31C6…7F16`, fonte e changelog no repo do contrato, seção "
 - **Explorer:** host novo `explorer.testnet.arc.io` (o antigo `testnet.arcscan.app` responde 301 pra ele). Badge virou "Verified on Arc Explorer" e aponta pro v2 (`?tab=contract`). Teste em `page.test.tsx` falha se qualquer link da landing contiver `arcscan`.
 - **Validação no `CreateVault`:** além do `startsWith('0x')`, agora `isAddress` + bloqueio do zero address antes de enviar (o v2 reverteria com `ZeroAddressHeir` e o usuário pagaria gas à toa); revert real também cai na mesma mensagem amigável.
 
+### Bugs achados testando o preview com wallet real (2026-10-09)
+
+- **✓ dos presets no `CreateVault`:** o ✓ estava fixo no texto do default ("1 year ✓", "1 month ✓") e não acompanhava a seleção. Agora vem de `presetLabel(label, selected)` — o ✓ marca o chip selecionado; dias customizados que não batem com nenhum preset não marcam nenhum.
+- **`Deposit` não resetava depois do depósito:** o valor continuava preenchido e "2. Deposit" ativo (um clique a mais depositava de novo). Duas causas: nada limpava o estado após o sucesso, e `hasAllowance` era `allowance >= parsedAmount` — com valor vazio (`0`) isso é **sempre** verdadeiro, então Deposit ficava habilitado sem valor nenhum. Agora `sentRef` lembra qual tx foi enviada; depósito confirmado → limpa o valor, mostra "Deposit successful: X USDC…" e chama `reset()` do `useWriteContract`; approve confirmado → mantém o valor e mostra "now deposit". Valor vazio nunca conta como aprovado.
+
 ## Regras de trabalho
 
 1. **Sempre rodar os testes unitários existentes antes de fazer commit.**

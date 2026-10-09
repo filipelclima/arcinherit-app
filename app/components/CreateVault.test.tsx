@@ -143,7 +143,7 @@ describe('CreateVault', () => {
     mockReadyToCreate()
     render(<CreateVault onCreated={vi.fn()} />)
 
-    for (const label of ['3 months', '1 year ✓', '2 years', '7 days', '1 month ✓', '2 months']) {
+    for (const label of ['3 months', '6 months', '1 year ✓', '2 years', '7 days', '2 weeks', '1 month ✓', '2 months']) {
       expect(screen.getByText(label)).toHaveClass('ui-press')
     }
     const submit = screen.getByText('Create my inheritance vault →')
@@ -251,5 +251,44 @@ describe('CreateVault: v2 contract and ZeroAddressHeir', () => {
     render(<CreateVault onCreated={vi.fn()} />)
 
     expect(screen.getByRole('alert')).toHaveTextContent(/can't be the zero address/)
+  })
+})
+
+describe('CreateVault: the ✓ follows the selected preset', () => {
+  function setup() {
+    mockUseAccount.mockReturnValue({ address: '0x1111111111111111111111111111111111111111', isConnected: true, chainId: 5042002 } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+    mockUseWriteContract.mockReturnValue({ writeContract: vi.fn(), data: undefined, isPending: false } as any)
+    mockUseWaitForTransactionReceipt.mockReturnValue({ isLoading: false, isSuccess: false } as any)
+    render(<CreateVault onCreated={vi.fn()} />)
+  }
+  const checked = () => screen.getAllByRole('button').map(b => b.textContent ?? '').filter(t => t.endsWith('✓'))
+
+  it('marks the defaults (1 year, 1 month) with ✓ at first, and nothing else', () => {
+    setup()
+    expect(checked()).toEqual(['1 year ✓', '1 month ✓'])
+  })
+
+  it('moves the safety-window ✓ to "2 weeks" when it is picked (regression: it stayed on "1 month")', () => {
+    setup()
+    fireEvent.click(screen.getByText('2 weeks'))
+    expect(screen.getByText('2 weeks ✓')).toBeInTheDocument()
+    expect(screen.getByText('1 month')).toBeInTheDocument()
+    expect(checked()).toEqual(['1 year ✓', '2 weeks ✓'])
+    expect(document.body.textContent).toContain('14 more days')
+  })
+
+  it('moves the check-in-period ✓ the same way', () => {
+    setup()
+    fireEvent.click(screen.getByText('2 years'))
+    expect(checked()).toEqual(['2 years ✓', '1 month ✓'])
+    fireEvent.click(screen.getByText('3 months'))
+    expect(checked()).toEqual(['3 months ✓', '1 month ✓'])
+  })
+
+  it('shows no ✓ in the check-in group for a custom number of days that matches no preset', () => {
+    setup()
+    fireEvent.change(screen.getByDisplayValue('365'), { target: { value: '400' } })
+    expect(checked()).toEqual(['1 month ✓'])
   })
 })

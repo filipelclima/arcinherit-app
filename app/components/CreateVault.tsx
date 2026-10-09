@@ -14,6 +14,12 @@ interface Heir { wallet: string; percentage: number }
 
 const TIMELOCK_PRESETS = [90, 180, 365, 730]
 const GRACE_PRESETS = [7, 14, 30, 60]
+const TIMELOCK_LABELS: Record<number, string> = { 90: '3 months', 180: '6 months', 365: '1 year', 730: '2 years' }
+const GRACE_LABELS: Record<number, string> = { 7: '7 days', 14: '2 weeks', 30: '1 month', 60: '2 months' }
+
+// The ✓ marks whichever preset is selected — it used to be baked into the default's label, so it
+// stayed on "1 year"/"1 month" after the user picked another option.
+const presetLabel = (label: string, selected: boolean) => (selected ? `${label} ✓` : label)
 
 // Same trick as the action buttons: the unselected outline is an inset shadow, not a border, so the
 // gradient never sits under a transparent border (where it would tile and leave a 1px off-color edge).
@@ -155,7 +161,7 @@ export function CreateVault({ onCreated }: { onCreated: () => void }) {
               onClick={() => setTimelockDays(d)}
               style={chipStyle(timelockDays === d)}
             >
-              {d === 90 ? '3 months' : d === 180 ? '6 months' : d === 365 ? '1 year ✓' : '2 years'}
+              {presetLabel(TIMELOCK_LABELS[d], timelockDays === d)}
             </button>
           ))}
         </div>
@@ -183,7 +189,7 @@ export function CreateVault({ onCreated }: { onCreated: () => void }) {
               onClick={() => setGraceDays(d)}
               style={chipStyle(graceDays === d)}
             >
-              {d === 7 ? '7 days' : d === 14 ? '2 weeks' : d === 30 ? '1 month ✓' : '2 months'}
+              {presetLabel(GRACE_LABELS[d], graceDays === d)}
             </button>
           ))}
         </div>

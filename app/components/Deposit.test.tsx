@@ -26,7 +26,7 @@ describe('Deposit', () => {
     const address = '0x1111111111111111111111111111111111111111'
 
     mockUseAccount.mockReturnValue({ address, chain: { id: 5042002 } } as any)
-    mockUseWriteContract.mockReturnValue({ writeContract: vi.fn(), data: '0xhash', isPending: false } as any)
+    mockUseWriteContract.mockReturnValue({ writeContract: vi.fn(), data: '0xhash', isPending: false, reset: vi.fn() } as any)
 
     let isSuccess = false
     mockUseWaitForTransactionReceipt.mockImplementation(() => ({ isLoading: false, isSuccess }) as any)
@@ -63,7 +63,7 @@ describe('Deposit', () => {
 
     // Same bug scenario as CreateVault: address present, chain undefined.
     mockUseAccount.mockReturnValue({ address, chain: undefined } as any)
-    mockUseWriteContract.mockReturnValue({ writeContract, data: undefined, isPending: false } as any)
+    mockUseWriteContract.mockReturnValue({ writeContract, data: undefined, isPending: false, reset: vi.fn() } as any)
     mockUseWaitForTransactionReceipt.mockReturnValue({ isLoading: false, isSuccess: false } as any)
 
     mockUseReadContract.mockImplementation(((params: any) => {
@@ -99,7 +99,7 @@ describe('Deposit', () => {
     const address = '0x1111111111111111111111111111111111111111'
 
     mockUseAccount.mockReturnValue({ address, isConnected: true, chainId: 42161 } as any) // Arbitrum, not Arc Testnet
-    mockUseWriteContract.mockReturnValue({ writeContract, data: undefined, isPending: false } as any)
+    mockUseWriteContract.mockReturnValue({ writeContract, data: undefined, isPending: false, reset: vi.fn() } as any)
     mockUseWaitForTransactionReceipt.mockReturnValue({ isLoading: false, isSuccess: false } as any)
 
     mockUseReadContract.mockImplementation(((params: any) => {
@@ -131,7 +131,7 @@ describe('Deposit', () => {
 
   function mockActiveVault(allowance: bigint) {
     mockUseAccount.mockReturnValue({ address: '0x1111111111111111111111111111111111111111', isConnected: true, chainId: 5042002 } as any)
-    mockUseWriteContract.mockReturnValue({ writeContract: vi.fn(), data: undefined, isPending: false } as any)
+    mockUseWriteContract.mockReturnValue({ writeContract: vi.fn(), data: undefined, isPending: false, reset: vi.fn() } as any)
     mockUseWaitForTransactionReceipt.mockReturnValue({ isLoading: false, isSuccess: false } as any)
     mockUseReadContract.mockImplementation(((params: any) => {
       switch (params.functionName) {
@@ -155,8 +155,8 @@ describe('Deposit', () => {
     mockActiveVault(0n)
     render(<Deposit />)
 
-    // With no amount typed, allowance (0) >= amount (0), so the flow already sits on the Deposit step.
-    fireEvent.click(screen.getByText('2. Deposit'))
+    // With no amount typed, the flow sits on the Approve step (an empty amount never counts as approved).
+    fireEvent.click(screen.getByText('1. Approve'))
 
     const alert = screen.getByRole('alert')
     expect(alert).toHaveTextContent('Enter an amount')
@@ -198,7 +198,7 @@ describe('Deposit', () => {
 
   it('shows a skeleton (not a blank screen) while the vault is still loading', () => {
     mockUseAccount.mockReturnValue({ address: '0x1111111111111111111111111111111111111111', isConnected: true, chainId: 5042002 } as any)
-    mockUseWriteContract.mockReturnValue({ writeContract: vi.fn(), data: undefined, isPending: false } as any)
+    mockUseWriteContract.mockReturnValue({ writeContract: vi.fn(), data: undefined, isPending: false, reset: vi.fn() } as any)
     mockUseWaitForTransactionReceipt.mockReturnValue({ isLoading: false, isSuccess: false } as any)
     mockUseReadContract.mockImplementation(((params: any) => {
       if (params.functionName === 'getVault') return { data: undefined, isLoading: true }
@@ -214,7 +214,7 @@ describe('Deposit', () => {
 
   it('goes back to blank (not the skeleton) once loading finishes and there is no active vault', () => {
     mockUseAccount.mockReturnValue({ address: '0x1111111111111111111111111111111111111111', isConnected: true, chainId: 5042002 } as any)
-    mockUseWriteContract.mockReturnValue({ writeContract: vi.fn(), data: undefined, isPending: false } as any)
+    mockUseWriteContract.mockReturnValue({ writeContract: vi.fn(), data: undefined, isPending: false, reset: vi.fn() } as any)
     mockUseWaitForTransactionReceipt.mockReturnValue({ isLoading: false, isSuccess: false } as any)
     mockUseReadContract.mockImplementation(((params: any) => {
       if (params.functionName === 'getVault') return { data: undefined, isLoading: false }
@@ -232,7 +232,7 @@ describe('Deposit → vault balance refresh', () => {
   it('invalidates the vault balance and wallet balance reads (and only those) once a transaction succeeds', () => {
     invalidateQueries.mockClear()
     mockUseAccount.mockReturnValue({ address: '0x1111111111111111111111111111111111111111' } as any)
-    mockUseWriteContract.mockReturnValue({ writeContract: vi.fn(), data: '0xhash', isPending: false } as any)
+    mockUseWriteContract.mockReturnValue({ writeContract: vi.fn(), data: '0xhash', isPending: false, reset: vi.fn() } as any)
     mockUseWaitForTransactionReceipt.mockReturnValue({ isLoading: false, isSuccess: false } as any)
     mockUseReadContract.mockImplementation(((params: any) => {
       if (params.functionName === 'getVault') return { data: [0n, 0n, 0n, true, []] }
@@ -253,5 +253,111 @@ describe('Deposit → vault balance refresh', () => {
     expect(predicate(key('balanceOf'))).toBe(true)
     expect(predicate(key('getVault'))).toBe(false)
     expect(predicate(key('getBalances', 'somethingElse'))).toBe(false)
+  })
+})
+
+describe('Deposit: resetting after a successful deposit', () => {
+  const address = '0x1111111111111111111111111111111111111111'
+
+  // Mutable chain state, so a test can "confirm" a tx and re-render like wagmi would.
+  function setup({ allowance }: { allowance: bigint }) {
+    const state = { allowance, isSuccess: false, hash: undefined as string | undefined }
+    const writeContract = vi.fn(() => { state.hash = '0xhash' })
+    const reset = vi.fn(() => { state.hash = undefined; state.isSuccess = false })
+    mockUseAccount.mockReturnValue({ address, isConnected: true, chainId: 5042002 } as any)
+    mockUseWriteContract.mockImplementation((() => ({ writeContract, data: state.hash, isPending: false, reset })) as any)
+    mockUseWaitForTransactionReceipt.mockImplementation((() => ({ isLoading: false, isSuccess: state.isSuccess })) as any)
+    mockUseReadContract.mockImplementation(((params: any) => {
+      switch (params.functionName) {
+        case 'getVault': return { data: [0n, 0n, 0n, true, []] }
+        case 'decimals': return { data: 6 }
+        case 'symbol': return { data: 'USDC' }
+        case 'balanceOf': return { data: 1000_000000n }
+        case 'allowance': return { data: state.allowance, refetch: vi.fn() }
+        default: return { data: undefined }
+      }
+    }) as any)
+    return { state, writeContract, reset }
+  }
+
+  const amountInput = () => screen.getByPlaceholderText('0.00') as HTMLInputElement
+
+  it('clears the amount, disables "2. Deposit" and resets the tx once a deposit confirms, so another click cannot deposit again', () => {
+    const { state, writeContract, reset } = setup({ allowance: 10_000000n })
+    const { rerender } = render(<Deposit />)
+
+    fireEvent.change(amountInput(), { target: { value: '10' } })
+    fireEvent.click(screen.getByText('2. Deposit'))
+    expect(writeContract).toHaveBeenCalledTimes(1)
+    expect((writeContract.mock.calls[0] as any)[0]).toMatchObject({ functionName: 'deposit' })
+
+    // The deposit confirms; it used up the whole allowance.
+    state.isSuccess = true
+    state.allowance = 0n
+    rerender(<Deposit />)
+    rerender(<Deposit />)
+
+    expect(reset).toHaveBeenCalled()
+    expect(amountInput().value).toBe('')
+    expect(screen.getByTestId('deposit-notice')).toHaveTextContent('Deposit successful: 10 USDC added to your vault.')
+    expect(screen.getByText('2. Deposit')).toBeDisabled()
+
+    fireEvent.click(screen.getByText('2. Deposit'))
+    expect(writeContract).toHaveBeenCalledTimes(1)
+  })
+
+  it('needs a new approve for the next deposit when the allowance was used up', () => {
+    const { state } = setup({ allowance: 10_000000n })
+    const { rerender } = render(<Deposit />)
+    fireEvent.change(amountInput(), { target: { value: '10' } })
+    fireEvent.click(screen.getByText('2. Deposit'))
+    state.isSuccess = true
+    state.allowance = 0n
+    rerender(<Deposit />)
+    rerender(<Deposit />)
+
+    fireEvent.change(amountInput(), { target: { value: '5' } })
+    expect(screen.getByText('1. Approve')).not.toBeDisabled()
+    expect(screen.getByText('1. Approve').style.background).toContain('linear-gradient')
+    expect(screen.getByText('2. Deposit')).toBeDisabled()
+  })
+
+  it('goes straight to "2. Deposit" for a new amount the remaining allowance still covers', () => {
+    const { state } = setup({ allowance: 50_000000n })
+    const { rerender } = render(<Deposit />)
+    fireEvent.change(amountInput(), { target: { value: '10' } })
+    fireEvent.click(screen.getByText('2. Deposit'))
+    state.isSuccess = true
+    state.allowance = 40_000000n
+    rerender(<Deposit />)
+    rerender(<Deposit />)
+
+    expect(screen.getByText('2. Deposit')).toBeDisabled() // empty amount after the reset
+    fireEvent.change(amountInput(), { target: { value: '5' } })
+    expect(screen.getByText('Approved')).toBeDisabled()
+    expect(screen.getByText('2. Deposit')).not.toBeDisabled()
+  })
+
+  it('keeps the amount after an approval (the deposit still has to happen) and says what is next', () => {
+    const { state, reset } = setup({ allowance: 0n })
+    const { rerender } = render(<Deposit />)
+    fireEvent.change(amountInput(), { target: { value: '10' } })
+    fireEvent.click(screen.getByText('1. Approve'))
+
+    state.isSuccess = true
+    state.allowance = 10_000000n
+    rerender(<Deposit />)
+    rerender(<Deposit />)
+
+    expect(reset).toHaveBeenCalled()
+    expect(amountInput().value).toBe('10')
+    expect(screen.getByTestId('deposit-notice')).toHaveTextContent('Approval successful — now deposit')
+    expect(screen.getByText('2. Deposit')).not.toBeDisabled()
+  })
+
+  it('never enables "2. Deposit" for an empty amount, however large the allowance', () => {
+    setup({ allowance: 1_000_000_000000n })
+    render(<Deposit />)
+    expect(screen.getByText('2. Deposit')).toBeDisabled()
   })
 })
