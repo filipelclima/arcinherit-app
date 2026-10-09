@@ -6,7 +6,8 @@ dApp de herança onchain na Arc Network. Deixa o dono de uma vault designar herd
 
 - **Deploy:** https://arcinherit-app.vercel.app (Vercel, projeto `arcinherit-app` — o projeto duplicado `arcinherit-app-vpip` foi deletado)
 - **GitHub:** https://github.com/filipelclima/arcinherit-app
-- **Contrato:** [ArcInherit](https://github.com/filipelclima/ArcInherit) — deployado e verificado na Arc Testnet em `0xdb7875DBfDe3A5C4763C11eF15f972C26E3D8818`
+- **Contrato:** [ArcInherit](https://github.com/filipelclima/ArcInherit) — **v2 (atual)** deployado e verificado na Arc Testnet em `0x31C6962393e002845a647bB22e21c6B219eF7F16`; **v1 (legado)** em `0xdb7875DBfDe3A5C4763C11eF15f972C26E3D8818`, ainda com vaults reais (ver "Contrato v2 + vaults legados v1" abaixo)
+- **Explorer:** https://explorer.testnet.arc.io (o host antigo `testnet.arcscan.app` só redireciona — nunca usar em link novo)
 
 ## Stack
 
@@ -19,7 +20,10 @@ dApp de herança onchain na Arc Network. Deixa o dono de uma vault designar herd
 
 ## Estrutura
 
-- `lib/contract.ts` — endereço do contrato, ABI (via `parseAbi`), config da Arc Testnet
+- `lib/contract.ts` — endereços do contrato (`CONTRACT_ADDRESS` = v2, `LEGACY_CONTRACT_ADDRESS` = v1, tipo `VaultContract`, `isLegacyContract()`), ABI v2 (via `parseAbi`, com eventos e erros customizados), config da Arc Testnet, `explorerAddressUrl()`
+- `lib/contractErrors.ts` — `friendlyContractError(err)`: erro do `useWriteContract` → frase em linguagem simples (erros customizados decodificados pelo nome, "rejeitou na wallet", fallback)
+- `lib/claimShare.ts` — `computeClaimShare()`: mesma conta do `claimInheritance` (v2 com snapshot, v1 sobre o que sobrou)
+- `app/components/LegacyVault.tsx` — aviso "Legacy vault" + migração guiada v1 → v2
 - `lib/wagmi.ts` — `createConfig` do wagmi + augmentação do `Register` (necessária para inferência de tipos correta em `useWriteContract`)
 - `lib/theme.ts` — tokens do novo design system claro (ver seção "Redesign visual" abaixo)
 - `lib/duration.ts` — `formatDuration(seconds: bigint)`, compartilhado entre `VaultStatus.tsx` (UI) e `lib/generateInheritancePdf.ts` (PDF), pra não duplicar a lógica de arredondamento
@@ -174,6 +178,18 @@ Toggle opcional (sol/lua no header, ao lado de "How it works") — o app continu
 
 O botão "How it works" do header, além de alternar o texto/visibilidade do guia (`showHowItWorks`, comportamento já existente), agora também rola a página suavemente até a seção do kicker + 3 feature cards na Hero (`id="how-it-works"` no `Hero.tsx`) — só ao **abrir**, nunca ao fechar/"Hide guide". Respeita `prefers-reduced-motion`: `scrollIntoView({ behavior: 'auto', ... })` em vez de `'smooth'` quando o usuário prefere movimento reduzido. Como a Hero só renderiza desconectado, clicar o botão já conectado (onde a seção não existe) é um no-op inofensivo via `?.`.
 
+## Contrato v2 + vaults legados v1 (2026-10-09)
+
+O contrato v2 (`0x31C6…7F16`, fonte e changelog no repo do contrato, seção "v2 changelog" do README) corrige dois bugs do v1: (1) com 2+ herdeiros, cada claim no v1 é um percentual do que **sobrou** no vault, então quem reivindica depois recebe menos (40/60 de 1000 → 400 e 360, não 600); (2) o v1 aceita `0x0` como herdeiro. O v2 também introduz **snapshot** (o primeiro claim de cada token grava o saldo, `claimSnapshot(owner, token)`, e todo herdeiro recebe seu % desse valor) e **claim rounds** (`claimRound(owner)`: se o dono faz check-in depois de algum claim, claims fecham e começa um round novo; o herdeiro fica com o que já reivindicou; `hasClaimed` passa a se referir ao round atual). Os dois contratos são imutáveis, então **o v1 continua rodando com vaults reais** — não dá pra "migrar" o estado de um pro outro.
+
+- **Um ABI só pros dois contratos.** Todas as funções compartilhadas têm assinatura idêntica (validado contra o artifact do deploy em `ignition/deployments/chain-5042002/` do repo do contrato: nomes, tipos, outputs e `indexed` batem). **Nunca chamar `claimSnapshot`/`claimRound` no v1** — não existem lá e revertem. Em `ClaimInheritance.tsx` isso é garantido por `query: { enabled: !legacy }` no `claimSnapshot` e por só montar `ClaimRoundNotice` pra v2; testado.
+- **ABI agora inclui os erros customizados** (antes não tinha nenhum, então o viem não conseguia decodificar revert nenhum pelo nome). `lib/contractErrors.ts` mapeia cada um pra uma frase; teste trava que todo erro do ABI tem mensagem.
+- **My Vault (`page.tsx`):** lê `getVault` nos dois contratos e só decide o que renderizar depois que **as duas** leituras resolveram (senão o form de criar piscaria pra dono de vault v1). Só v2 → fluxo normal. Só v1 → `LegacyVault` (aviso + migração em 2 passos: cancelar no v1, que devolve todos os tokens na mesma tx, e depois criar no v2) + `VaultStatus`/`CheckIn` com `contract={LEGACY_CONTRACT_ADDRESS}`. **`Deposit` fica escondido de propósito pra vault v1** — não colocar dinheiro novo no contrato com bug; check-in continua porque é ele que impede os herdeiros de reivindicar. Os dois → vault v2 normal + `LegacyVault hasCurrentVault` (só oferece cancelar o antigo). Depois do cancelamento, `cancelledLegacy` (estado em `page.tsx`) mostra "Step 1 done" acima do `CreateVault`. Confirmação do cancelamento é em dois cliques na própria UI, sem `window.confirm` (diálogos nativos travam a automação de browser e destoam do resto do app).
+- **Claim (`ClaimInheritance.tsx`):** `useOwnerVault()` roda pra v2 e pra v1; prefere o vault em que a wallet conectada é herdeira (v2 primeiro); se for herdeira nos dois, aparece um seletor "Current contract / Legacy contract (v1)". Quando os claims abrem, `ClaimShares` lista cada token com o **valor exato** que o herdeiro vai receber (`computeClaimShare`, mesma conta do contrato, incluindo o teto no saldo restante) ou "Already claimed"; clicar na linha preenche o campo de token. Rounds explicados em texto simples no painel de shares, no `ClaimRoundNotice` (round > 0) e no aviso "claimable" do dono em `VaultStatus` (só v2 — no v1 não existe round).
+- **PDF:** `generateInheritancePdf` recebe `contractAddress` (default v2). `VaultStatus` passa o contrato do próprio vault — senão o PDF de um vault v1 mandaria os herdeiros pro contrato errado. Texto legal do PDF não mudou.
+- **Explorer:** host novo `explorer.testnet.arc.io` (o antigo `testnet.arcscan.app` responde 301 pra ele). Badge virou "Verified on Arc Explorer" e aponta pro v2 (`?tab=contract`). Teste em `page.test.tsx` falha se qualquer link da landing contiver `arcscan`.
+- **Validação no `CreateVault`:** além do `startsWith('0x')`, agora `isAddress` + bloqueio do zero address antes de enviar (o v2 reverteria com `ZeroAddressHeir` e o usuário pagaria gas à toa); revert real também cai na mesma mensagem amigável.
+
 ## Regras de trabalho
 
 1. **Sempre rodar os testes unitários existentes antes de fazer commit.**
@@ -189,6 +205,9 @@ O botão "How it works" do header, além de alternar o texto/visibilidade do gui
 - `vitest.setup.ts` também tem polyfills globais pra duas APIs que o jsdom não implementa: `window.matchMedia` (retorna `matches: false` por padrão — testes que precisam de um valor específico, como `useTheme.test.tsx`, sobrescrevem com `vi.stubGlobal`) e `Element.prototype.scrollIntoView` (no-op). Sem isso, qualquer teste que dispare um clique/efeito que chame essas APIs quebra com `TypeError`, mesmo sem o teste ter nada a ver com tema ou scroll.
 - Testes ficam colocados junto do componente (`Componente.test.tsx` ao lado de `Componente.tsx`).
 - Hooks do wagmi (`useAccount`, `useConnect`, `useDisconnect` etc.) devem ser mockados com `vi.mock('wagmi', () => ({...}))` — ver `ConnectWallet.test.tsx` como exemplo.
+- **Com dois contratos, mockar `useReadContract` pelo `address` também, não só pelo `functionName`** — um mock só por `functionName` faz v1 e v2 responderem igual, o que esconde exatamente os bugs de roteamento v1/v2. Ver `mockContracts()` em `ClaimInheritance.test.tsx` e `renderOwner()` em `page.test.tsx`.
+- Componentes que usam `useQueryClient` (`Deposit`, `LegacyVault`, `ClaimInheritance`) precisam de `vi.mock('@tanstack/react-query', () => ({ useQueryClient: () => ({ invalidateQueries }) }))` no teste — sem isso: "No QueryClient set".
+- **Armadilha:** `beforeEach(() => mock.mockClear())` (arrow sem chaves) **retorna** o mock, e o Vitest trata função retornada pelo `beforeEach` como teardown — ele chama o mock sem argumentos depois do teste, e a implementação quebra com `Cannot read properties of undefined`. Sempre `beforeEach(() => { mock.mockClear() })`. As `mock.calls` acumulam entre testes do mesmo arquivo (não há `clearMocks` na config), então teste que inspeciona `mock.calls` precisa desse clear.
 
 ## Comandos
 

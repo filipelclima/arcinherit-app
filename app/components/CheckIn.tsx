@@ -1,6 +1,6 @@
 'use client'
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
-import { ARC_TESTNET, CONTRACT_ADDRESS, ABI } from '@/lib/contract'
+import { ARC_TESTNET, CONTRACT_ADDRESS, ABI, type VaultContract } from '@/lib/contract'
 import { useIsWrongNetwork } from '../hooks/useEnsureArcNetwork'
 import { CheckCircleIcon } from './icons'
 import { actionButton, Card, CardHeader, CardHeaderSkeleton, Skeleton, StatusMessage } from './ui'
@@ -17,14 +17,16 @@ function CheckInSkeleton() {
   )
 }
 
-export function CheckIn() {
+// `contract` is v2 by default; a legacy (v1) vault passes LEGACY_CONTRACT_ADDRESS — checking in there
+// still matters, it's what stops heirs from claiming while the owner hasn't moved to v2 yet.
+export function CheckIn({ contract = CONTRACT_ADDRESS }: { contract?: VaultContract }) {
   const { address } = useAccount()
   const isWrongNetwork = useIsWrongNetwork()
   const { writeContract, data: hash, isPending } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
 
   const { data: vault, isLoading } = useReadContract({
-    address: CONTRACT_ADDRESS,
+    address: contract,
     abi: ABI,
     functionName: 'getVault',
     args: address ? [address] : undefined,
@@ -50,7 +52,7 @@ export function CheckIn() {
         {...actionButton(true)}
         onClick={() => {
           if (!address) return
-          writeContract({ address: CONTRACT_ADDRESS, abi: ABI, functionName: 'checkIn', account: address, chain: ARC_TESTNET })
+          writeContract({ address: contract, abi: ABI, functionName: 'checkIn', account: address, chain: ARC_TESTNET })
         }}
         disabled={isPending || isConfirming || isWrongNetwork}
       >

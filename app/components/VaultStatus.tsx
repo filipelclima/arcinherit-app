@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useAccount, useReadContract } from 'wagmi'
-import { CONTRACT_ADDRESS, ABI, ERC20_ABI } from '@/lib/contract'
+import { CONTRACT_ADDRESS, ABI, ERC20_ABI, isLegacyContract, type VaultContract } from '@/lib/contract'
 import { formatDuration } from '@/lib/duration'
 import { formatTokenAmount } from '@/lib/formatTokenAmount'
 import { generateInheritancePdf } from '@/lib/generateInheritancePdf'
@@ -137,9 +137,9 @@ function BalanceRow({ token, amount }: { token: `0x${string}`; amount: bigint })
   )
 }
 
-function VaultBalances({ owner }: { owner: `0x${string}` }) {
+function VaultBalances({ owner, contract }: { owner: `0x${string}`; contract: VaultContract }) {
   const { data: balances, isLoading } = useReadContract({
-    address: CONTRACT_ADDRESS,
+    address: contract,
     abi: ABI,
     functionName: 'getBalances',
     args: [owner],
@@ -174,13 +174,14 @@ function VaultBalances({ owner }: { owner: `0x${string}` }) {
   )
 }
 
-export function VaultStatus() {
+// `contract` is v2 by default; page.tsx passes LEGACY_CONTRACT_ADDRESS to show an owner's v1 vault.
+export function VaultStatus({ contract = CONTRACT_ADDRESS }: { contract?: VaultContract }) {
   const { address } = useAccount()
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
   const [pdfError, setPdfError] = useState('')
 
   const { data: vault, isLoading } = useReadContract({
-    address: CONTRACT_ADDRESS,
+    address: contract,
     abi: ABI,
     functionName: 'getVault',
     args: address ? [address] : undefined,
@@ -188,7 +189,7 @@ export function VaultStatus() {
   })
 
   const { data: timeLeft } = useReadContract({
-    address: CONTRACT_ADDRESS,
+    address: contract,
     abi: ABI,
     functionName: 'timeUntilClaim',
     args: address ? [address] : undefined,
@@ -196,7 +197,7 @@ export function VaultStatus() {
   })
 
   const { data: canClaim } = useReadContract({
-    address: CONTRACT_ADDRESS,
+    address: contract,
     abi: ABI,
     functionName: 'canClaim',
     args: address ? [address] : undefined,
@@ -228,6 +229,7 @@ export function VaultStatus() {
         heirs: heirs.map(h => ({ wallet: h.wallet, percentage: h.percentage })),
         timelockDuration,
         gracePeriod,
+        contractAddress: contract,
       })
     } catch {
       setPdfError('Could not generate the PDF. Please try again.')
@@ -255,6 +257,13 @@ export function VaultStatus() {
       {canClaim && (
         <StatusMessage variant="error" prominent style={{ marginBottom: '1rem' }}>
           Your heirs can claim your funds right now. Check in immediately to stop this.
+          {/* Claim rounds only exist on v2 — on v1 a heir who claimed can never claim that token again. */}
+          {!isLegacyContract(contract) && (
+            <div data-testid="claim-round-note" style={{ fontWeight: 400, fontSize: 13, marginTop: 6 }}>
+              If an heir has already claimed, checking in closes claims again and starts a new claim round.
+              They keep what they already claimed, and the rest stays in your vault.
+            </div>
+          )}
         </StatusMessage>
       )}
 
@@ -303,7 +312,7 @@ export function VaultStatus() {
           <StatusMessage variant="success">{timeInfo.text}</StatusMessage>
         )}
 
-        <VaultBalances owner={address} />
+        <VaultBalances owner={address} contract={contract} />
       </Card>
 
       {/* Heirs */}

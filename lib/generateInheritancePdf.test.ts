@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { CONTRACT_ADDRESS } from './contract'
+import { CONTRACT_ADDRESS, LEGACY_CONTRACT_ADDRESS } from './contract'
 
 const { mockDoc, textCalls, saveCalls, addImageCalls } = vi.hoisted(() => {
   const textCalls: unknown[][] = []
@@ -72,6 +72,20 @@ describe('generateInheritancePdf', () => {
     expect(content).toContain(`Vault owner address: ${OWNER}`)
     expect(content).toContain(`Contract address: ${CONTRACT_ADDRESS}`)
     expect(content).toContain('Network: Arc Testnet')
+  })
+
+  it('uses the vault\'s own contract address when given one (a legacy v1 vault must not point heirs at v2)', async () => {
+    await generateInheritancePdf({
+      ownerAddress: OWNER,
+      heirs: [{ wallet: HEIR_A, percentage: 100 }],
+      timelockDuration: BigInt(365 * 86400),
+      gracePeriod: BigInt(30 * 86400),
+      contractAddress: LEGACY_CONTRACT_ADDRESS,
+    })
+
+    const content = allTextContent()
+    expect(content).toContain(`Contract address: ${LEGACY_CONTRACT_ADDRESS}`)
+    expect(content).not.toContain(CONTRACT_ADDRESS)
   })
 
   it('lists every heir with their address and percentage when there are multiple heirs', async () => {

@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from 'wagmi'
+import { ContractFunctionExecutionError, ContractFunctionRevertedError, encodeErrorResult } from 'viem'
 import { CreateVault } from './CreateVault'
+import { ABI, CONTRACT_ADDRESS } from '@/lib/contract'
 
 vi.mock('wagmi', () => ({
   useAccount: vi.fn(),
@@ -192,5 +194,62 @@ describe('CreateVault', () => {
 
     expect(screen.getByText('Vault created!')).toBeInTheDocument()
     expect(screen.queryByTestId('create-vault-skeleton')).not.toBeInTheDocument()
+  })
+})
+
+describe('CreateVault: v2 contract and ZeroAddressHeir', () => {
+  const OWNER = '0x1111111111111111111111111111111111111111'
+
+  function setup(error: unknown = null) {
+    const writeContract = vi.fn()
+    mockUseAccount.mockReturnValue({ address: OWNER, isConnected: true, chainId: 5042002 } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+    mockUseWriteContract.mockReturnValue({ writeContract, data: undefined, isPending: false, error } as any)
+    mockUseWaitForTransactionReceipt.mockReturnValue({ isLoading: false, isSuccess: false } as any)
+    return writeContract
+  }
+
+  const typeHeir = (value: string) =>
+    fireEvent.change(screen.getByPlaceholderText('Heir 1 — wallet address (0x...)'), { target: { value } })
+
+  it('creates new vaults on the v2 contract', () => {
+    const writeContract = setup()
+    render(<CreateVault onCreated={vi.fn()} />)
+    typeHeir('0x2222222222222222222222222222222222222222')
+    fireEvent.click(screen.getByText('Create my inheritance vault →'))
+
+    expect(writeContract.mock.calls[0][0]).toMatchObject({ address: CONTRACT_ADDRESS, functionName: 'createVault' })
+  })
+
+  it('blocks the zero address as an heir with a friendly message, before sending a tx that v2 would revert', () => {
+    const writeContract = setup()
+    render(<CreateVault onCreated={vi.fn()} />)
+    typeHeir('0x0000000000000000000000000000000000000000')
+    fireEvent.click(screen.getByText('Create my inheritance vault →'))
+
+    expect(writeContract).not.toHaveBeenCalled()
+    expect(screen.getByRole('alert')).toHaveTextContent(/can't be the zero address/)
+  })
+
+  it('rejects an address that starts with 0x but is not a valid address', () => {
+    const writeContract = setup()
+    render(<CreateVault onCreated={vi.fn()} />)
+    typeHeir('0x1234')
+    fireEvent.click(screen.getByText('Create my inheritance vault →'))
+
+    expect(writeContract).not.toHaveBeenCalled()
+    expect(screen.getByRole('alert')).toHaveTextContent('not a valid address')
+  })
+
+  it('shows a ZeroAddressHeir revert from the contract as the same friendly message', () => {
+    const reverted = new ContractFunctionRevertedError({
+      abi: ABI,
+      data: encodeErrorResult({ abi: ABI, errorName: 'ZeroAddressHeir' }),
+      functionName: 'createVault',
+    })
+    setup(new ContractFunctionExecutionError(reverted, { abi: ABI, functionName: 'createVault', args: [] }))
+    render(<CreateVault onCreated={vi.fn()} />)
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/can't be the zero address/)
   })
 })

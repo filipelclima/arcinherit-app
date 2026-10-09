@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from 'wagmi'
 import { CheckIn } from './CheckIn'
+import { CONTRACT_ADDRESS, LEGACY_CONTRACT_ADDRESS } from '@/lib/contract'
 
 vi.mock('wagmi', () => ({
   useAccount: vi.fn(),
@@ -118,5 +119,35 @@ describe('CheckIn', () => {
 
     expect(screen.queryByTestId('check-in-skeleton')).not.toBeInTheDocument()
     expect(container).toBeEmptyDOMElement()
+  })
+})
+
+describe('CheckIn: v2 and legacy contracts', () => {
+  const address = '0x1111111111111111111111111111111111111111'
+
+  function setup() {
+    const writeContract = vi.fn()
+    mockUseAccount.mockReturnValue({ address, isConnected: true, chainId: 5042002 } as any)
+    mockUseReadContract.mockReturnValue({ data: [0n, 0n, 0n, true, []] } as any)
+    mockUseWriteContract.mockReturnValue({ writeContract, data: undefined, isPending: false } as any)
+    mockUseWaitForTransactionReceipt.mockReturnValue({ isLoading: false, isSuccess: false } as any)
+    return writeContract
+  }
+
+  it('checks in on v2 by default', () => {
+    const writeContract = setup()
+    render(<CheckIn />)
+    fireEvent.click(screen.getByText('Check in — I am alive'))
+    expect(writeContract.mock.calls[0][0]).toMatchObject({ address: CONTRACT_ADDRESS, functionName: 'checkIn' })
+  })
+
+  it('checks in on v1 for a legacy vault, reading that vault from v1 too', () => {
+    const writeContract = setup()
+    mockUseReadContract.mockClear()
+    render(<CheckIn contract={LEGACY_CONTRACT_ADDRESS} />)
+    fireEvent.click(screen.getByText('Check in — I am alive'))
+
+    expect(writeContract.mock.calls[0][0]).toMatchObject({ address: LEGACY_CONTRACT_ADDRESS, functionName: 'checkIn' })
+    expect((mockUseReadContract.mock.calls[0][0] as any).address).toBe(LEGACY_CONTRACT_ADDRESS)
   })
 })

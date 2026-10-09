@@ -11,6 +11,8 @@ export interface GenerateInheritancePdfParams {
   heirs: InheritancePdfHeir[]
   timelockDuration: bigint
   gracePeriod: bigint
+  /** The contract that holds this vault — a legacy (v1) vault must send heirs to v1, not v2. */
+  contractAddress?: string
 }
 
 export const INHERITANCE_PDF_FILENAME = 'heirloom-inheritance-instructions.pdf'
@@ -41,6 +43,7 @@ export async function generateInheritancePdf({
   heirs,
   timelockDuration,
   gracePeriod,
+  contractAddress = CONTRACT_ADDRESS,
 }: GenerateInheritancePdfParams): Promise<void> {
   // jsPDF is ~130KB and only ever needed by a vault owner clicking this one button —
   // loaded on demand instead of in everyone's initial bundle.
@@ -118,7 +121,7 @@ export async function generateInheritancePdf({
   }
   detailLine(`Check-in period: every ${formatDuration(timelockDuration)}`)
   detailLine(`Safety window: ${Math.round(Number(gracePeriod) / 86400)} days after a missed check-in`)
-  detailLine(`Contract address: ${CONTRACT_ADDRESS}`)
+  detailLine(`Contract address: ${contractAddress}`)
   detailLine(`Network: ${ARC_TESTNET.name}`)
   y += 8
 

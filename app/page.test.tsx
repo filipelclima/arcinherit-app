@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { useAccount, useReadContract, useSwitchChain } from 'wagmi'
+import { useAccount, useReadContract, useSwitchChain, useWaitForTransactionReceipt } from 'wagmi'
 import Home from './page'
-import { ARC_TESTNET } from '@/lib/contract'
+import { ARC_TESTNET, CONTRACT_ADDRESS, LEGACY_CONTRACT_ADDRESS } from '@/lib/contract'
 import { ThemeProvider } from './hooks/useTheme'
 
 vi.mock('wagmi', () => ({
@@ -17,9 +17,15 @@ vi.mock('wagmi', () => ({
   useWaitForTransactionReceipt: vi.fn(() => ({ isLoading: false, isSuccess: false })),
 }))
 
+// LegacyVault and Deposit refresh reads through the query client after a tx.
+vi.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+}))
+
 const mockUseAccount = vi.mocked(useAccount)
 const mockUseReadContract = vi.mocked(useReadContract)
 const mockUseSwitchChain = vi.mocked(useSwitchChain)
+const mockUseWaitForTransactionReceipt = vi.mocked(useWaitForTransactionReceipt)
 
 describe('Home header', () => {
   it('wraps the header groups instead of squeezing button text onto multiple lines on narrow screens', () => {
@@ -248,7 +254,7 @@ describe('Connected screens: tabs and content transitions', () => {
 })
 
 describe('Verified contract badge', () => {
-  it('shows a "Verified on Arcscan" badge in the footer, linking to the contract\'s verified code, in a new tab', () => {
+  it('shows a "Verified on Arc Explorer" badge in the footer, linking to the v2 contract\'s verified code on the new explorer, in a new tab', () => {
     mockUseAccount.mockReturnValue({ address: undefined, isConnected: false } as any)
     mockUseReadContract.mockReturnValue({ data: undefined } as any)
 
@@ -257,9 +263,10 @@ describe('Verified contract badge', () => {
     const badges = screen.getAllByTestId('verified-contract-badge')
     expect(badges.length).toBeGreaterThan(0)
     for (const badge of badges) {
+      expect(badge).toHaveTextContent('Verified on Arc Explorer')
       expect(badge).toHaveAttribute(
         'href',
-        'https://testnet.arcscan.app/address/0xdb7875DBfDe3A5C4763C11eF15f972C26E3D8818?tab=contract',
+        'https://explorer.testnet.arc.io/address/0x31C6962393e002845a647bB22e21c6B219eF7F16?tab=contract',
       )
       expect(badge).toHaveAttribute('target', '_blank')
       expect(badge).toHaveAttribute('rel', expect.stringContaining('noopener'))
@@ -366,5 +373,149 @@ describe('Theme toggle', () => {
     fireEvent.click(toggle)
     expect(document.documentElement.classList.contains('dark')).toBe(false)
     expect(toggle).toHaveAttribute('aria-label', 'Switch to dark mode')
+  })
+})
+
+describe('Owner tab: v2 vaults and legacy (v1) vaults', () => {
+  const OWNER = '0x1111111111111111111111111111111111111111'
+  const activeVault = [BigInt(365 * 86400), BigInt(30 * 86400), BigInt(Math.floor(Date.now() / 1000)), true, [{ wallet: '0x2222222222222222222222222222222222222222', percentage: 100 }]]
+  const noVault = [0n, 0n, 0n, false, []]
+
+  // Each contract answers getVault for its own vault; everything else is empty.
+  function renderOwner({ v2, v1 }: { v2: boolean; v1: boolean }) {
+    mockUseAccount.mockReturnValue({ address: OWNER, isConnected: true, chainId: ARC_TESTNET.id } as any)
+    mockUseSwitchChain.mockReturnValue({ switchChain: vi.fn(), status: 'idle' } as any)
+    mockUseReadContract.mockImplementation(((params: any) => {
+      if (params.functionName === 'getVault') {
+        if (params.address === CONTRACT_ADDRESS) return { data: v2 ? activeVault : noVault, isLoading: false }
+        if (params.address === LEGACY_CONTRACT_ADDRESS) return { data: v1 ? activeVault : noVault, isLoading: false }
+      }
+      if (params.functionName === 'getBalances') return { data: [], isLoading: false }
+      return { data: undefined }
+    }) as any)
+    return render(<Home />)
+  }
+
+  afterEach(() => {
+    mockUseWaitForTransactionReceipt.mockImplementation((() => ({ isLoading: false, isSuccess: false })) as any)
+  })
+
+  it('reads the owner\'s vault on both contracts', () => {
+    mockUseReadContract.mockClear()
+    renderOwner({ v2: false, v1: false })
+
+    const vaultReads = mockUseReadContract.mock.calls.map(c => c[0] as any).filter(p => p.functionName === 'getVault')
+    expect(vaultReads.map(p => p.address)).toEqual(expect.arrayContaining([CONTRACT_ADDRESS, LEGACY_CONTRACT_ADDRESS]))
+  })
+
+  it('shows the create form (on v2) when the owner has no vault on either contract', () => {
+    renderOwner({ v2: false, v1: false })
+
+    expect(screen.getByText('Set up your inheritance vault')).toBeInTheDocument()
+    expect(screen.queryByTestId('legacy-vault-notice')).not.toBeInTheDocument()
+  })
+
+  it('shows a v2 vault as usual, with check-in and deposit, and no legacy notice', () => {
+    renderOwner({ v2: true, v1: false })
+
+    expect(screen.getByText('Your Vault')).toBeInTheDocument()
+    expect(screen.getByText('Deposit Tokens')).toBeInTheDocument()
+    expect(screen.queryByTestId('legacy-vault-notice')).not.toBeInTheDocument()
+  })
+
+  it('shows a v1-only owner their legacy vault with a notice and the guided move, keeps check-in, and hides deposit and the create form', () => {
+    renderOwner({ v2: false, v1: true })
+
+    const notice = screen.getByTestId('legacy-vault-notice')
+    expect(notice).toHaveTextContent('Legacy vault')
+    expect(notice).toHaveTextContent('Move to the current contract in two steps')
+    expect(screen.getByRole('button', { name: 'Step 1: Cancel legacy vault' })).toBeInTheDocument()
+
+    expect(screen.getByText('Your Vault')).toBeInTheDocument()
+    expect(screen.getByText('Check in — I am alive')).toBeInTheDocument()
+    expect(screen.queryByText('Deposit Tokens')).not.toBeInTheDocument()
+    expect(screen.queryByText('Set up your inheritance vault')).not.toBeInTheDocument()
+  })
+
+  it('shows an owner with vaults on both contracts their v2 vault plus a notice to close the legacy one', () => {
+    renderOwner({ v2: true, v1: true })
+
+    expect(screen.getByTestId('legacy-vault-notice')).toHaveTextContent('You also have a legacy vault')
+    expect(screen.getByRole('button', { name: 'Cancel legacy vault' })).toBeInTheDocument()
+    expect(screen.getByText('Deposit Tokens')).toBeInTheDocument()
+  })
+
+  it('after step 1 (legacy vault cancelled), shows step 2: a "step 1 done" message above the v2 create form', () => {
+    // The cancel tx confirms while the legacy vault is still showing...
+    mockUseWaitForTransactionReceipt.mockImplementation((() => ({ isLoading: false, isSuccess: true })) as any)
+    const { rerender } = renderOwner({ v2: false, v1: true })
+
+    // ...then the refreshed read says v1 is no longer active.
+    mockUseWaitForTransactionReceipt.mockImplementation((() => ({ isLoading: false, isSuccess: false })) as any)
+    mockUseReadContract.mockImplementation(((params: any) => {
+      if (params.functionName === 'getVault') return { data: noVault, isLoading: false }
+      return { data: undefined }
+    }) as any)
+    rerender(<Home />)
+
+    expect(screen.getByTestId('legacy-cancelled-message')).toHaveTextContent('Step 1 done')
+    expect(screen.getByText('Set up your inheritance vault')).toBeInTheDocument()
+    expect(screen.queryByTestId('legacy-vault-notice')).not.toBeInTheDocument()
+  })
+
+  it('waits for both reads before deciding what to show', () => {
+    mockUseAccount.mockReturnValue({ address: OWNER, isConnected: true, chainId: ARC_TESTNET.id } as any)
+    mockUseReadContract.mockImplementation(((params: any) => {
+      if (params.functionName === 'getVault' && params.address === LEGACY_CONTRACT_ADDRESS) return { data: undefined, isLoading: true }
+      if (params.functionName === 'getVault') return { data: noVault, isLoading: false }
+      return { data: undefined }
+    }) as any)
+    render(<Home />)
+
+    expect(screen.getByTestId('vault-status-skeleton')).toBeInTheDocument()
+    expect(screen.queryByText('Set up your inheritance vault')).not.toBeInTheDocument()
+  })
+})
+
+describe('FAQ (v2)', () => {
+  function renderLanding() {
+    mockUseAccount.mockReturnValue({ address: undefined, isConnected: false } as any)
+    mockUseReadContract.mockReturnValue({ data: undefined } as any)
+    return render(<Home />)
+  }
+
+  it('explains that claim order does not matter', () => {
+    renderLanding()
+    expect(screen.getByText('If I have several heirs, does it matter who claims first?')).toBeInTheDocument()
+    expect(document.body.textContent).toMatch(/whatever order they claim in/)
+  })
+
+  it('scopes the claim-order answer to the current contract, since v1 vaults lack the fix', () => {
+    renderLanding()
+    const answer = screen.getByText('If I have several heirs, does it matter who claims first?').nextElementSibling!
+    expect(answer.textContent).toMatch(/^Not for vaults on the current contract\./)
+    expect(answer.textContent).toMatch(/original contract don't have this fix/)
+    expect(answer.textContent).toMatch(/heirs who claim later receive less/)
+  })
+
+  it('explains claim rounds when the owner checks in after a claim', () => {
+    renderLanding()
+    expect(document.body.textContent).toMatch(/they keep what they claimed: your check-in closes claims again and starts a new claim round/)
+    // The old answer said check-in only works "as long as heirs haven't claimed yet" — no longer true.
+    expect(document.body.textContent).not.toMatch(/as long as heirs haven't claimed yet/)
+  })
+
+  it('tells owners of vaults on the original contract what to do', () => {
+    renderLanding()
+    expect(screen.getByText('I created my vault on the original contract. What should I do?')).toBeInTheDocument()
+  })
+
+  it('links the footer contract address to v2 on explorer.testnet.arc.io, never testnet.arcscan.app', () => {
+    renderLanding()
+    const footerLink = screen.getByRole('link', { name: /0x31C69623\.\.\.eF7F16/ })
+    expect(footerLink).toHaveAttribute('href', 'https://explorer.testnet.arc.io/address/0x31C6962393e002845a647bB22e21c6B219eF7F16')
+    for (const link of screen.getAllByRole('link')) {
+      expect(link.getAttribute('href') ?? '').not.toContain('arcscan')
+    }
   })
 })

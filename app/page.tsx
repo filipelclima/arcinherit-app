@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useAccount, useReadContract } from 'wagmi'
 import { ConnectWallet } from './components/ConnectWallet'
@@ -14,10 +14,11 @@ import { CreateVault } from './components/CreateVault'
 import { CheckIn } from './components/CheckIn'
 import { Deposit } from './components/Deposit'
 import { ClaimInheritance } from './components/ClaimInheritance'
+import { LegacyCancelledMessage, LegacyVault } from './components/LegacyVault'
 import { CheckCircleIcon, LockIcon, MoonIcon, SunIcon, UsersIcon } from './components/icons'
 import './components/ui.css'
 import { useTheme } from './hooks/useTheme'
-import { CONTRACT_ADDRESS, ABI } from '@/lib/contract'
+import { CONTRACT_ADDRESS, ABI, explorerAddressUrl, LEGACY_CONTRACT_ADDRESS } from '@/lib/contract'
 import { ARC_GRADIENT, ARC_GRADIENT_TEXT, COLOR_BG, COLOR_BG_SUBTLE, COLOR_BORDER, COLOR_SUCCESS, COLOR_SUCCESS_BG, COLOR_SUCCESS_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY, COLOR_TEXT_TERTIARY } from '@/lib/theme'
 
 // Sun/moon toggle: shows the icon for what clicking WILL do (sun = "go light" while dark, moon =
@@ -41,10 +42,10 @@ function ThemeToggle() {
   )
 }
 
-const CONTRACT_EXPLORER_URL = `https://testnet.arcscan.app/address/${CONTRACT_ADDRESS}`
-// The "Code" tab of the address page, where Arcscan (Blockscout) shows the verified source —
-// confirmed by navigating there manually: Blockscout uses a ?tab=contract query param, not a #code
-// hash fragment.
+// Always the current (v2) contract — the one new vaults are created on.
+const CONTRACT_EXPLORER_URL = explorerAddressUrl(CONTRACT_ADDRESS)
+// The "Code" tab of the address page, where the Arc Testnet explorer (Blockscout) shows the verified
+// source — Blockscout uses a ?tab=contract query param, not a #code hash fragment.
 const CONTRACT_CODE_URL = `${CONTRACT_EXPLORER_URL}?tab=contract`
 
 // Small trust signal: a link to the contract's verified source on the explorer. Neutral/green like
@@ -65,7 +66,7 @@ function VerifiedContractBadge({ style }: { style?: CSSProperties }) {
       }}
     >
       <CheckCircleIcon size={14} color={COLOR_SUCCESS} />
-      Verified on Arcscan
+      Verified on Arc Explorer
     </a>
   )
 }
@@ -93,7 +94,23 @@ export default function Home() {
     query: { enabled: !!address },
   })
 
+  // v1 is legacy but still holds real vaults (see lib/contract.ts). An owner with an active v1 vault
+  // sees it with a "Legacy vault" notice and a guided move to v2, instead of an empty create form.
+  const { data: legacyVault, isLoading: isLoadingLegacyVault } = useReadContract({
+    address: LEGACY_CONTRACT_ADDRESS,
+    abi: ABI,
+    functionName: 'getVault',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address },
+  })
+
+  // Set once the owner finishes step 1 of the move (cancelled on v1), so step 2's create form shows
+  // with a "step 1 done" message instead of reading like a brand-new user's screen.
+  const [cancelledLegacy, setCancelledLegacy] = useState(false)
+  const handleLegacyCancelled = useCallback(() => setCancelledLegacy(true), [])
+
   const hasVault = vault && vault[3]
+  const hasLegacyVault = !!(legacyVault && legacyVault[3])
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
@@ -158,23 +175,31 @@ export default function Home() {
                 },
                 {
                   q: 'What if I just forget to check in?',
-                  a: 'That\'s what the safety window is for. Even after the main period expires, heirs still have to wait the extra time you set. You can check in at any point — even after the deadline — as long as heirs haven\'t claimed yet.'
+                  a: 'That\'s what the safety window is for. Even after the main period expires, heirs still have to wait the extra time you set. You can check in at any point, even after the deadline. If an heir has already claimed by then, they keep what they claimed: your check-in closes claims again and starts a new claim round for whatever is left in your vault.'
                 },
                 {
                   q: 'Can my heirs take the money before I die?',
                   a: 'No. The smart contract enforces the rules. Heirs can only claim after both the check-in period AND the safety window have expired. There are no exceptions.'
                 },
                 {
+                  q: 'If I have several heirs, does it matter who claims first?',
+                  a: 'Not for vaults on the current contract. There, the first claim of each token records how much of it the vault holds at that moment, and every heir gets their percentage of that same amount, whatever order they claim in. Vaults created on the original contract don\'t have this fix: each heir gets their percentage of whatever is left when they claim, so heirs who claim later receive less.'
+                },
+                {
                   q: 'What tokens can I put in the vault?',
                   a: 'Any ERC-20 token on the Arc network — including USDC, EURC, and any other token that gets deployed on Arc.'
                 },
                 {
+                  q: 'I created my vault on the original contract. What should I do?',
+                  a: 'It keeps working: you can still check in, and your heirs can still claim from the Claim tab. We recommend moving to the current contract, which fixes a bug where heirs who claim later got less than their share. Connect your wallet and follow the two steps under My Vault: cancel the old vault (all tokens come back to your wallet), then create a new one.'
+                },
+                {
                   q: 'Do I need to trust Heirloom?',
-                  a: 'No. The contract is immutable — not even the developers can access your funds or change the rules. You can read the verified contract code on Blockscout.',
+                  a: 'No. The contract is immutable — not even the developers can access your funds or change the rules. You can read the verified contract code on the Arc Testnet explorer.',
                   verified: true,
                 },
-              ].map((item, i) => (
-                <div key={i} style={{ marginBottom: i < 4 ? '1rem' : 0, paddingBottom: i < 4 ? '1rem' : 0, borderBottom: i < 4 ? `1px solid ${COLOR_BORDER}` : 'none' }}>
+              ].map((item, i, all) => (
+                <div key={i} style={{ marginBottom: i < all.length - 1 ? '1rem' : 0, paddingBottom: i < all.length - 1 ? '1rem' : 0, borderBottom: i < all.length - 1 ? `1px solid ${COLOR_BORDER}` : 'none' }}>
                   <div style={{ fontSize: 14, fontWeight: 600, color: COLOR_TEXT_PRIMARY, marginBottom: 6 }}>{item.q}</div>
                   <div style={{ fontSize: 13, color: COLOR_TEXT_SECONDARY, lineHeight: 1.7 }}>{item.a}</div>
                   {item.verified && <VerifiedContractBadge style={{ marginTop: 10 }} />}
@@ -224,16 +249,30 @@ export default function Home() {
               // until we actually know — otherwise CreateVault's form flashes for existing-vault
               // owners for the instant getVault takes to resolve. One neutral skeleton stands in for
               // either outcome until then.
-              isLoadingVault ? (
+              isLoadingVault || isLoadingLegacyVault ? (
                 <VaultStatusSkeleton />
               ) : (
                 <>
-                  <VaultStatus key={refreshKey} />
-                  {!hasVault && <CreateVault onCreated={() => setRefreshKey(k => k + 1)} />}
-                  {hasVault && (
+                  {hasLegacyVault && <LegacyVault hasCurrentVault={!!hasVault} onCancelled={handleLegacyCancelled} />}
+                  {hasLegacyVault && !hasVault ? (
+                    // Legacy-only owner: their v1 vault keeps working until they move. Check-in stays
+                    // (missing it is what lets heirs claim); Deposit is deliberately left out so no new
+                    // money goes into the contract with the claim-order bug.
                     <>
-                      <CheckIn />
-                      <Deposit />
+                      <VaultStatus contract={LEGACY_CONTRACT_ADDRESS} />
+                      <CheckIn contract={LEGACY_CONTRACT_ADDRESS} />
+                    </>
+                  ) : (
+                    <>
+                      {cancelledLegacy && !hasVault && <LegacyCancelledMessage />}
+                      <VaultStatus key={refreshKey} />
+                      {!hasVault && <CreateVault onCreated={() => setRefreshKey(k => k + 1)} />}
+                      {hasVault && (
+                        <>
+                          <CheckIn />
+                          <Deposit />
+                        </>
+                      )}
                     </>
                   )}
                 </>

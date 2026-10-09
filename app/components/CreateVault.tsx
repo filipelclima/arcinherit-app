@@ -1,7 +1,9 @@
 'use client'
 import { useState } from 'react'
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
+import { isAddress, zeroAddress } from 'viem'
 import { ARC_TESTNET, CONTRACT_ADDRESS, ABI } from '@/lib/contract'
+import { CONTRACT_ERROR_MESSAGES, friendlyContractError } from '@/lib/contractErrors'
 import { InfoIcon } from './Tooltip'
 import { ARC_GRADIENT, COLOR_ACCENT, COLOR_BG_SUBTLE, COLOR_BORDER, COLOR_DANGER, COLOR_DANGER_BG, COLOR_DANGER_BORDER, COLOR_SUCCESS, COLOR_SUCCESS_BG, COLOR_SUCCESS_BORDER, COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY, COLOR_TEXT_TERTIARY } from '@/lib/theme'
 import { useIsWrongNetwork } from '../hooks/useEnsureArcNetwork'
@@ -67,7 +69,7 @@ export function CreateVault({ onCreated }: { onCreated: () => void }) {
     query: { enabled: !!address },
   })
 
-  const { writeContract, data: hash, isPending } = useWriteContract()
+  const { writeContract, data: hash, isPending, error: writeError } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
 
   // isSuccess (just created it) takes priority: the loading flag below reflects the read of the vault
@@ -112,6 +114,9 @@ export function CreateVault({ onCreated }: { onCreated: () => void }) {
     if (timelockDays < 30) return setError('Minimum check-in period is 30 days')
     if (graceDays < 7) return setError('Minimum safety window is 7 days')
     if (heirs.some(h => !h.wallet || !h.wallet.startsWith('0x'))) return setError('All heir wallet addresses must start with 0x and be valid')
+    // v2 reverts with ZeroAddressHeir here; catch it before the user pays gas for a failing tx.
+    if (heirs.some(h => isAddress(h.wallet) && h.wallet.toLowerCase() === zeroAddress)) return setError(CONTRACT_ERROR_MESSAGES.ZeroAddressHeir)
+    if (heirs.some(h => !isAddress(h.wallet))) return setError('One of the heir wallet addresses is not a valid address. Please check it.')
     if (totalPct !== 100) return setError(`Percentages must add up to 100% (currently ${totalPct}%)`)
 
     writeContract({
@@ -246,8 +251,8 @@ export function CreateVault({ onCreated }: { onCreated: () => void }) {
         <div>• Total inheritance split across <strong style={{ color: COLOR_TEXT_PRIMARY }}>{heirs.length} heir{heirs.length > 1 ? 's' : ''}</strong></div>
       </div>
 
-      {error && (
-        <StatusMessage variant="error" style={{ marginBottom: '1rem' }}>{error}</StatusMessage>
+      {(error || writeError) && (
+        <StatusMessage variant="error" style={{ marginBottom: '1rem' }}>{error || friendlyContractError(writeError)}</StatusMessage>
       )}
 
       <StatusMessage variant="info" icon={<LockIcon size={16} color={COLOR_ACCENT} />} style={{ marginBottom: '1rem', fontSize: 12, fontWeight: 400, lineHeight: 1.6 }}>

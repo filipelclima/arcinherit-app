@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { useAccount, useReadContract } from 'wagmi'
 import { VaultStatus } from './VaultStatus'
 import { generateInheritancePdf } from '@/lib/generateInheritancePdf'
+import { CONTRACT_ADDRESS, LEGACY_CONTRACT_ADDRESS } from '@/lib/contract'
 
 vi.mock('wagmi', () => ({
   useAccount: vi.fn(),
@@ -134,6 +135,7 @@ describe('VaultStatus', () => {
       ],
       timelockDuration,
       gracePeriod,
+      contractAddress: CONTRACT_ADDRESS,
     })
 
     // Flush the resolved mock promise (and the resulting isGeneratingPdf state update)
@@ -482,5 +484,60 @@ describe('VaultStatus balance section', () => {
     render(<VaultStatus />)
 
     expect(screen.getByTestId('vault-status-skeleton').querySelector('[data-testid="vault-balances-skeleton"]')).not.toBeNull()
+  })
+})
+
+describe('VaultStatus: v2 vs legacy (v1) contract', () => {
+  beforeEach(() => { mockUseReadContract.mockClear() })
+
+  const owner = '0x1111111111111111111111111111111111111111'
+  const heirs = [{ wallet: '0x2222222222222222222222222222222222222222', percentage: 100 }]
+
+  function mockClaimableVault() {
+    mockUseAccount.mockReturnValue({ address: owner } as any)
+    mockUseReadContract.mockImplementation(((params: any) => {
+      switch (params.functionName) {
+        case 'getVault':
+          return { data: [BigInt(30 * 86400), BigInt(7 * 86400), 0n, true, heirs], isLoading: false }
+        case 'timeUntilClaim':
+          return { data: 0n }
+        case 'canClaim':
+          return { data: true }
+        default:
+          return { data: undefined }
+      }
+    }) as any)
+  }
+
+  it('reads from the v2 contract by default and explains claim rounds when heirs can claim', () => {
+    mockClaimableVault()
+    render(<VaultStatus />)
+
+    const addresses = mockUseReadContract.mock.calls.map(c => (c[0] as any).address)
+    expect(addresses).toContain(CONTRACT_ADDRESS)
+    expect(addresses).not.toContain(LEGACY_CONTRACT_ADDRESS)
+    expect(screen.getByTestId('claim-round-note')).toHaveTextContent(/new claim round/)
+    expect(screen.getByTestId('claim-round-note')).toHaveTextContent(/keep what they already claimed/)
+  })
+
+  it('reads every vault value from v1 for a legacy vault, and has no claim-round note (rounds are v2-only)', () => {
+    mockClaimableVault()
+    render(<VaultStatus contract={LEGACY_CONTRACT_ADDRESS} />)
+
+    const vaultReads = mockUseReadContract.mock.calls
+      .map(c => c[0] as any)
+      .filter(p => ['getVault', 'timeUntilClaim', 'canClaim', 'getBalances'].includes(p.functionName))
+    expect(vaultReads.length).toBeGreaterThan(0)
+    for (const read of vaultReads) expect(read.address).toBe(LEGACY_CONTRACT_ADDRESS)
+    expect(screen.queryByTestId('claim-round-note')).not.toBeInTheDocument()
+  })
+
+  it('puts the legacy contract address in the heirs\' PDF for a legacy vault', () => {
+    mockClaimableVault()
+    mockGenerateInheritancePdf.mockResolvedValue(undefined)
+    render(<VaultStatus contract={LEGACY_CONTRACT_ADDRESS} />)
+
+    fireEvent.click(screen.getByTestId('download-instructions-button'))
+    expect(mockGenerateInheritancePdf).toHaveBeenLastCalledWith(expect.objectContaining({ contractAddress: LEGACY_CONTRACT_ADDRESS }))
   })
 })
